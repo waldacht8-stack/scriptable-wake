@@ -31,7 +31,7 @@ module.exports = function (core, dawn, ui, notify) {
       label: '', big: '', sub: '',
       sun: 0, deadline: null,
       steps: [], lines: [], primary: null, secondary: [],
-      menu: [['routine', 'ルーティン'], ['belongings', '持ち物'], ['records', '記録'], ['design', 'デザイン'], ['settings', '設定']],
+      menu: [['panel:routine', 'ルーティン'], ['panel:belongings', '持ち物'], ['panel:records', '記録'], ['design', 'デザイン'], ['settings', '設定']],
     }
     const weather = optional(core.weatherFor, data, now)
     const today = optional(core.tasksFor, data, now) || []
@@ -60,7 +60,7 @@ module.exports = function (core, dawn, ui, notify) {
       if (weather) m.lines.push('天気　' + weather)
       if (today.length) m.lines.push('今日やること　' + today.join('・'))
       if (cfg.ownRule && optional(core.overslept, cfg, session)) m.lines.push('自分ルール　' + cfg.ownRule)
-      m.primary = st.complete ? ['belongings', '持ち物を確かめる'] : ['next', W.next(st.current.name)]
+      m.primary = st.complete ? ['panel:belongings', '持ち物を確かめる'] : ['next', W.next(st.current.name)]
       if (st.done > 0) m.secondary.push(['back', 'ひとつ戻す'])
       m.secondary.push(['speak', '読み上げる'])
       m.speech = ['出発まで、あと' + Math.max(0, Math.round((st.departure - now) / 60000)) + '分です。',
@@ -110,6 +110,34 @@ module.exports = function (core, dawn, ui, notify) {
       const skipped = data.state.skipDates.indexOf(core.dateKey(tomorrow)) >= 0
       if (typeof ui.toggleSkip === 'function') m.secondary.push(['skip', skipped ? label + 'のお休みを取り消す' : label + 'だけお休みにする'])
     }
+    // ---- パネル（ルーティン・持ち物・記録）の中身 ----
+    const rs = core.routineStatus(data, now)
+    m.routine = {
+      head: rs.departure ? dawn.timeText(T, rs.departure) + 'に出発 ・ 残り' + dawn.minutesText(T, rs.restMinutes) : '今日は出発時刻なし',
+      late: rs.lateMinutes ? 'このままだと' + N(rs.lateMinutes) + '分遅れます' : '',
+      items: cfg.routine.map((r, i) => ({ name: r.name, min: N(r.minutes) + '分', state: i < rs.done ? 'done' : i === rs.done ? 'now' : 'todo' })),
+    }
+    const bkey = core.dateKey(now)
+    const checked = data.state.belongings && data.state.belongings.date === bkey ? data.state.belongings.checked : []
+    m.belongings = cfg.belongings.map(b => ({ name: b, on: checked.indexOf(b) >= 0 }))
+    const week = core.recentSessions(data, now, 7)
+    const weeks = []
+    for (let i = 7; i >= 0; i--) {
+      const end = core.addDays(now, -7 * i)
+      const s0 = core.addDays(end, -6)
+      weeks.push({ label: (s0.getMonth() + 1) + '/' + s0.getDate(), avg: core.average(core.recentSessions(data, end, 7)) })
+    }
+    m.records = {
+      avg: core.average(week),
+      streak: core.streak(data),
+      weeks,
+      days: data.sessions.slice(-14).reverse().map(s => ({
+        date: core.fmtDate(new Date(s.date + 'T00:00:00')),
+        time: s.checkinAt ? core.fmtTime(new Date(s.checkinAt)) : '−',
+        stage: core.stageLabel(cfg, s.wokeStage).replace(/（.*）/, ''),
+        score: s.score,
+      })),
+    }
     return m
   }
 
@@ -120,9 +148,9 @@ module.exports = function (core, dawn, ui, notify) {
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <style>
 :root{--ink:#2B2433;--paper:#FBEFE3;--muted:#6B5F70;--accent:#B4482E;--btn:#2B2433;--btnInk:#FBEFE3;--line:#2B2433;
---s1:#3B3F6E;--s2:#8E6A8F;--s3:#E9967A;--s4:#F7C890;--sun:#FFF4D6;--skyInk:#FBEFE3;--lateInk:#FFE0C2}
+--s1:#3B3F6E;--s2:#8E6A8F;--s3:#E9967A;--s4:#F7C890;--sun:#FFF4D6;--skyInk:#FBEFE3;--lateInk:#FFE0C2;--warn:#B4482E}
 body.day{--s1:#4F7FB3;--s2:#7AA3CF;--s3:#A8C6E4;--s4:#D3E4F3;--sun:#FFFBEA;--paper:#F5F7FA;--ink:#1F2A3A;--muted:#5C6B80;--btn:#1F2A3A;--btnInk:#F5F7FA;--line:#1F2A3A;--accent:#B4482E}
-body.night,body.presleep{--s1:#0E1228;--s2:#161C3A;--s3:#20284C;--s4:#2C355E;--sun:#F3EFD8;--paper:#11152A;--ink:#E9E6F2;--muted:#9B98B5;--btn:#E9E6F2;--btnInk:#11152A;--line:#E9E6F2;--accent:#F2B880}
+body.night,body.presleep{--warn:#F2B880;--s1:#0E1228;--s2:#161C3A;--s3:#20284C;--s4:#2C355E;--sun:#F3EFD8;--paper:#11152A;--ink:#E9E6F2;--muted:#9B98B5;--btn:#E9E6F2;--btnInk:#11152A;--line:#E9E6F2;--accent:#F2B880}
 body.waking{--s1:#1C1F45;--s2:#4B3F6B;--s3:#B26A72;--s4:#E9A27A}
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 html,body{margin:0;height:100%}
@@ -157,16 +185,34 @@ button{font-family:inherit;border:0;cursor:pointer}
 .secondary button,.menu button{background:none;color:var(--muted);font-size:14px;padding:10px 6px;min-height:44px;text-decoration:underline;text-underline-offset:4px}
 .menu{display:flex;justify-content:space-around;border-top:1px solid color-mix(in srgb,var(--muted) 30%,transparent);padding-top:6px}
 .menu button{text-decoration:none;letter-spacing:.1em}
+.panel{position:fixed;left:0;right:0;bottom:0;top:12vh;background:var(--paper);color:var(--ink);border-radius:22px 22px 0 0;box-shadow:0 -8px 30px rgba(0,0,0,.25);transform:translateY(105%);transition:transform .35s cubic-bezier(.2,.7,.2,1);display:flex;flex-direction:column;z-index:10}
+.panel.open{transform:none}
+.phead{display:flex;align-items:center;justify-content:space-between;padding:18px 22px 10px;border-bottom:1px solid color-mix(in srgb,var(--muted) 30%,transparent)}
+.phead h2{margin:0;font-size:20px;letter-spacing:.12em}
+.pclose{background:none;color:var(--muted);font-size:15px;min-height:44px;padding:0 6px}
+.pbody{flex:1;overflow:auto;padding:12px 22px calc(env(safe-area-inset-bottom,0px) + 24px);display:flex;flex-direction:column;gap:8px}
+.pnote{font-size:14px;color:var(--muted);margin:2px 0 6px}
+.pnote.late{color:var(--warn);font-weight:700}
+.item{display:flex;align-items:center;gap:14px;width:100%;min-height:56px;padding:0 16px;border-radius:16px;background:color-mix(in srgb,var(--muted) 10%,transparent);color:var(--ink);font-size:18px;text-align:left}
+.item .mk{width:24px;height:24px;border-radius:50%;border:2px solid var(--muted);flex:none;display:flex;align-items:center;justify-content:center;font-size:14px}
+.item.done{color:var(--muted)}.item.done .mk,.item.on .mk{background:var(--accent);border-color:var(--accent);color:var(--paper)}
+.item.now{background:var(--btn);color:var(--btnInk)}.item.now .mk{border-color:var(--btnInk)}
+.item .nm{flex:1}.item .mn{font-size:14px;opacity:.75}
+.stat{display:flex;gap:10px}.stat div{flex:1;border-radius:16px;padding:12px 14px;background:color-mix(in srgb,var(--muted) 10%,transparent)}
+.stat b{display:block;font-size:30px;line-height:1.2}.stat span{font-size:12px;color:var(--muted)}
+.chart{width:100%;aspect-ratio:320/150;flex:none;margin:6px 0 4px}
+.day{display:flex;justify-content:space-between;font-size:15px;padding:8px 2px;border-bottom:1px solid color-mix(in srgb,var(--muted) 20%,transparent)}
+.day span:last-child{font-weight:700}
 /* ---- デザイン（設定で切り替え）。phase のクラスより後に書いて上書きする ---- */
-body.kissa{--s1:#5A3E2B;--s2:#86593D;--s3:#B98557;--s4:#E2BE8F;--sun:#FFF1D8;--skyInk:#FFF6E8;--paper:#EFE2CC;--ink:#3A2A1E;--muted:#7A6450;--btn:#3A2A1E;--btnInk:#FFF6E8;--line:#3A2A1E;--accent:#B23A24;--lateInk:#FFE0C2;font-family:"Hiragino Maru Gothic ProN","Zen Maru Gothic",sans-serif}
+body.kissa{--warn:#B23A24;--s1:#5A3E2B;--s2:#86593D;--s3:#B98557;--s4:#E2BE8F;--sun:#FFF1D8;--skyInk:#FFF6E8;--paper:#EFE2CC;--ink:#3A2A1E;--muted:#7A6450;--btn:#3A2A1E;--btnInk:#FFF6E8;--line:#3A2A1E;--accent:#B23A24;--lateInk:#FFE0C2;font-family:"Hiragino Maru Gothic ProN","Zen Maru Gothic",sans-serif}
 body.kissa.day{--s1:#8C6A4F;--s2:#B08D6C;--s3:#D2B48F;--s4:#EBD5B5}
-body.kissa.night,body.kissa.presleep{--s1:#1E1511;--s2:#2B1F18;--s3:#3A2B21;--s4:#4A382B;--sun:#F6E7CC;--paper:#231914;--ink:#F1E4D0;--muted:#B9A48C;--btn:#F1E4D0;--btnInk:#231914;--line:#F1E4D0;--accent:#E9A066}
-body.station{--s1:#0E0E12;--s2:#15151B;--s3:#1C1C24;--s4:#25252F;--sun:#FFB300;--skyInk:#FFB300;--paper:#0B0B0C;--ink:#F5F5F5;--muted:#8C8C8C;--btn:#FFB300;--btnInk:#0B0B0C;--line:#FFB300;--accent:#7CD86B;--lateInk:#FF6B5E;font-family:"Hiragino Sans","Noto Sans JP",sans-serif}
+body.kissa.night,body.kissa.presleep{--warn:#E9A066;--s1:#1E1511;--s2:#2B1F18;--s3:#3A2B21;--s4:#4A382B;--sun:#F6E7CC;--paper:#231914;--ink:#F1E4D0;--muted:#B9A48C;--btn:#F1E4D0;--btnInk:#231914;--line:#F1E4D0;--accent:#E9A066}
+body.station{--warn:#FF6B5E;--s1:#0E0E12;--s2:#15151B;--s3:#1C1C24;--s4:#25252F;--sun:#FFB300;--skyInk:#FFB300;--paper:#0B0B0C;--ink:#F5F5F5;--muted:#8C8C8C;--btn:#FFB300;--btnInk:#0B0B0C;--line:#FFB300;--accent:#7CD86B;--lateInk:#FF6B5E;font-family:"Hiragino Sans","Noto Sans JP",sans-serif}
 body.station .big{font-weight:800;letter-spacing:.02em}
 body.station .label,body.station .date{letter-spacing:.3em}
-body.sora{--s1:#BFD9F2;--s2:#D3E5F7;--s3:#E4EFFA;--s4:#F2F7FD;--sun:#FFD25E;--skyInk:#1E2B3C;--paper:#FFFFFF;--ink:#1E2B3C;--muted:#62728A;--btn:#2F6FEB;--btnInk:#FFFFFF;--line:#9CB8D8;--accent:#2F6FEB;--lateInk:#C2410C;font-family:"Hiragino Sans","Noto Sans JP",sans-serif}
+body.sora{--warn:#C2410C;--s1:#BFD9F2;--s2:#D3E5F7;--s3:#E4EFFA;--s4:#F2F7FD;--sun:#FFD25E;--skyInk:#1E2B3C;--paper:#FFFFFF;--ink:#1E2B3C;--muted:#62728A;--btn:#2F6FEB;--btnInk:#FFFFFF;--line:#9CB8D8;--accent:#2F6FEB;--lateInk:#C2410C;font-family:"Hiragino Sans","Noto Sans JP",sans-serif}
 body.sora.waking{--s1:#C9D3EE;--s2:#E1D5EA;--s3:#F4DCD6;--s4:#FBEBDD}
-body.sora.night,body.sora.presleep{--s1:#1B2740;--s2:#22314F;--s3:#2B3C5E;--s4:#35476D;--sun:#F2F0E0;--skyInk:#EAF0F8;--paper:#152034;--ink:#EAF0F8;--muted:#9FB0C8;--btn:#EAF0F8;--btnInk:#152034;--line:#9FB0C8;--accent:#8FB8FF;--lateInk:#FFC9A8}
+body.sora.night,body.sora.presleep{--warn:#FFC9A8;--s1:#1B2740;--s2:#22314F;--s3:#2B3C5E;--s4:#35476D;--sun:#F2F0E0;--skyInk:#EAF0F8;--paper:#152034;--ink:#EAF0F8;--muted:#9FB0C8;--btn:#EAF0F8;--btnInk:#152034;--line:#9FB0C8;--accent:#8FB8FF;--lateInk:#FFC9A8}
 body.sora .big,body.kissa .big{font-weight:700;letter-spacing:.02em}
 @media (prefers-reduced-motion: reduce){*{transition:none!important}}</style></head><body>
 <div class="sky">
@@ -184,9 +230,10 @@ body.sora .big,body.kissa .big{font-weight:700;letter-spacing:.02em}
 <div class="secondary" id="secondary"></div>
 <nav class="menu" id="menu"></nav>
 </div>
+<section class="panel" id="panel" aria-hidden="true"><div class="phead"><h2 id="ptitle"></h2><button type="button" class="pclose" onclick="closePanel()">閉じる</button></div><div class="pbody" id="pbody"></div></section>
 <script>
 var Q=[],CB=null,M=null;
-function act(a){if(CB){var c=CB;CB=null;c(a)}else Q.push(a)}
+function act(a){if(a.indexOf('panel:')===0){openPanel(a.slice(6));return}if(CB){var c=CB;CB=null;c(a)}else Q.push(a)}
 function wait(cb){if(Q.length)cb(Q.shift());else CB=cb}
 var D=['〇','一','二','三','四','五','六','七','八','九'];
 function kanji(n){n=Math.round(n);if(n<0||n>99)return String(n);if(n<10)return D[n];var t=Math.floor(n/10),o=n%10;return(t===1?'':D[t])+'十'+(o?D[o]:'')}
@@ -195,7 +242,16 @@ function esc(s){return String(s).replace(/[&<>"]/g,function(c){return{'&':'&amp;
 function btn(a,cls){return '<button type="button"'+(cls?' class="'+cls+'"':'')+' onclick="act(\\''+a[0]+'\\')">'+esc(a[1])+'</button>'}
 function dmin(min){var m=Math.max(0,Math.round(min));return m<60?m+'分':Math.floor(m/60)+'時間'+(m%60?(m%60)+'分':'')}
 function tick(){if(!M||!M.deadline)return;var x=(M.deadline-Date.now())/60000;document.getElementById('big').textContent=M.kanji?kmin(x):dmin(x)}
-function render(m){M=m;
+var P=null;
+function openPanel(k){P=k;drawPanel();var p=document.getElementById('panel');p.classList.add('open');p.setAttribute('aria-hidden','false')}
+function closePanel(){P=null;var p=document.getElementById('panel');p.classList.remove('open');p.setAttribute('aria-hidden','true')}
+function chart(w){var W=320,H=150,t=18,b=24,l=26,ph=H-t-b,s=(W-l-4)/w.length,bw=Math.min(24,s*.6),o='<svg class="chart" viewBox="0 0 '+W+' '+H+'" role="img" aria-label="週ごとの平均点">';[0,50,100].forEach(function(v){var y=t+ph*(1-v/100);o+='<line x1="'+l+'" x2="'+(W-4)+'" y1="'+y+'" y2="'+y+'" stroke="var(--muted)" stroke-opacity="'+(v?.25:.6)+'" stroke-width="'+(v?.5:1)+'"/><text x="'+(l-6)+'" y="'+(y+4)+'" font-size="10" text-anchor="end" fill="var(--muted)">'+v+'</text>'});w.forEach(function(k,i){var x=l+s*i+(s-bw)/2,last=i===w.length-1;if(k.avg!==null){var y=t+ph*(1-k.avg/100);o+='<rect x="'+x+'" y="'+y+'" width="'+bw+'" height="'+Math.max(2,ph*k.avg/100)+'" rx="4" fill="var(--accent)" fill-opacity="'+(last?1:.5)+'"/><text x="'+(x+bw/2)+'" y="'+(y-4)+'" font-size="10" text-anchor="middle" fill="var(--ink)"'+(last?' font-weight="700"':'')+'>'+k.avg+'</text>'}o+='<text x="'+(l+s*i+s/2)+'" y="'+(H-6)+'" font-size="9" text-anchor="middle" fill="var(--muted)">'+k.label+'</text>'});return o+'</svg>'}
+function drawPanel(){if(!P||!M)return;var h='',T={routine:'朝のルーティン',belongings:'持ち物',records:'起床の記録'}[P];
+if(P==='routine'){var r=M.routine;h+='<p class="pnote">'+esc(r.head)+'</p>'+(r.late?'<p class="pnote late">'+esc(r.late)+'</p>':'');r.items.forEach(function(x,i){h+='<button type="button" class="item '+x.state+'" onclick="act(\\'routine:'+i+'\\')"><span class="mk">'+(x.state==='done'?'✓':'')+'</span><span class="nm">'+esc(x.name)+'</span><span class="mn">'+esc(x.min)+'</span></button>'});if(!r.items.length)h+='<p class="pnote">項目がありません（設定で追加）</p>'}
+if(P==='belongings'){var all=M.belongings.length&&M.belongings.every(function(x){return x.on});h+='<p class="pnote">'+(all?'全部そろいました':'タップして確かめる')+'</p>';M.belongings.forEach(function(x,i){h+='<button type="button" class="item'+(x.on?' on':'')+'" onclick="act(\\'belong:'+i+'\\')"><span class="mk">'+(x.on?'✓':'')+'</span><span class="nm">'+esc(x.name)+'</span></button>'})}
+if(P==='records'){var R=M.records;h+='<div class="stat"><div><span>今週の平均</span><b>'+(R.avg===null?'−':R.avg+'点')+'</b></div><div><span>連続記録</span><b>'+R.streak+'日</b></div></div>'+chart(R.weeks);if(!R.days.length)h+='<p class="pnote">まだ記録がありません</p>';R.days.forEach(function(d){h+='<div class="day"><span>'+esc(d.date)+'　'+esc(d.time)+'　'+esc(d.stage)+'</span><span>'+d.score+'点</span></div>'})}
+document.getElementById('ptitle').textContent=T;document.getElementById('pbody').innerHTML=h}
+function render(m){M=m;if(P)setTimeout(drawPanel,0);
 document.body.className=m.phase+' '+m.theme+(m.late?' late':'');
 document.getElementById('date').textContent=m.date;
 document.getElementById('label').textContent=m.label;
@@ -238,6 +294,21 @@ setInterval(tick,20000);
     const now = new Date()
     if (a === 'next' || a === 'back') {
       core.advanceRoutine(data, now, a === 'next' ? 1 : -1)
+      core.saveState(data)
+    } else if (a.indexOf('routine:') === 0) {
+      // ルーティンの項目をタップ：そこまで完了（完了済みならそこから取り消し）
+      const i = Number(a.slice(8))
+      const st = core.routineStatus(data, now)
+      core.advanceRoutine(data, now, (i < st.done ? i : i + 1) - st.done)
+      core.saveState(data)
+    } else if (a.indexOf('belong:') === 0) {
+      const name = data.config.belongings[Number(a.slice(7))]
+      const key = core.dateKey(now)
+      if (!data.state.belongings || data.state.belongings.date !== key) data.state.belongings = { date: key, checked: [] }
+      const c = data.state.belongings.checked
+      const j = c.indexOf(name)
+      if (j >= 0) c.splice(j, 1)
+      else if (name) c.push(name)
       core.saveState(data)
     } else if (a === 'checkin') {
       Safari.open(core.shortcutURL('起床チェックイン'))
