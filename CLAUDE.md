@@ -8,6 +8,9 @@
 - ソースは `src/` に置き、`tools/deploy.ps1` で iCloud Drive の Scriptable フォルダへコピーする
   - コピー先：`%USERPROFILE%\iCloudDrive\iCloud~dk~simonbs~Scriptable`
   - iCloud の同期後、iPhone の Scriptable にスクリプトが現れる
+- GitHub：https://github.com/waldacht8-stack/scriptable-wake（公開・`main`）。iPhone の `起床 Update.js` が最新コミットの `src/manifest.json` に載ったファイルを取得して上書きする
+  - スクリプトを追加・削除したら `src/manifest.json` を更新する（`deploy.ps1` が載せ忘れを警告する）
+  - 公開リポジトリなので、個人データ（チェックインのコードなど）をコミットしない
 - 本アプリのファイル構成（既存 Todo アプリと同じ形）
   - `src/起床.js`：メイン（画面・ショートカットからの呼び出し口）
   - `src/起床ウィジェット.js`：ロック画面ウィジェット
