@@ -1,0 +1,12 @@
+{
+  "files": [
+    { "src": "起床.js", "dest": "起床.js" },
+    { "src": "起床ウィジェット.js", "dest": "起床ウィジェット.js" },
+    { "src": "起床 Update.js", "dest": "起床 Update.js" },
+    { "src": "wake-lib/core.js", "dest": "wake-lib/core.js" },
+    { "src": "wake-lib/notify.js", "dest": "wake-lib/notify.js" },
+    { "src": "wake-lib/widget.js", "dest": "wake-lib/widget.js" },
+    { "src": "wake-lib/ui.js", "dest": "wake-lib/ui.js" }
+  ],
+  "remove": []
+}
