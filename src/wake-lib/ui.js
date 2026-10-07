@@ -44,7 +44,7 @@ function row(table, title, subtitle, opts) {
   r.dismissOnSelect = false
   r.backgroundColor = o.bg || (o.header ? C.head : C.bg)
   const c = r.addText(String(title), subtitle ? String(subtitle) : undefined)
-  c.titleFont = o.big ? fnt(o.big, true) : o.header ? fnt(17, true) : fnt(17, false)
+  c.titleFont = o.big ? fnt(o.big, true) : o.small ? fnt(o.small, false) : o.header ? fnt(17, true) : fnt(17, false)
   c.titleColor = o.color || C.ink
   if (subtitle) {
     c.subtitleFont = fnt(o.subSize || 13, false)
@@ -623,6 +623,9 @@ async function settings(ctx) {
     row(t, 'アラーム準備のショートカット名', cfg.shortcutPlan, {
       height: 56, onSelect: edit(async () => { const v = await askText('ショートカットの名前', '就寝リマインドから開くショートカット', cfg.shortcutPlan); if (!v) return false; cfg.shortcutPlan = v }),
     })
+    row(t, '🔧 動作確認', '今の判定・通知の予約・起動の記録を見る', {
+      height: 56, onSelect: async () => { await diagnose(ctx); useTheme(ctx); render() },
+    })
   })
 }
 
@@ -646,7 +649,23 @@ async function diagnose(ctx) {
     row(t, '予約中の通知：' + mine.length + '件', mine.slice(0, 3).map(n => n.title).join(' / '), { height: 56 })
     row(t, 'データの場所', core.pathOf(''), { height: 56, subSize: 11 })
     for (const p of data.problems) row(t, '⚠ ' + p, null, { color: C.warn, height: 60 })
+    row(t, '起動の記録（新しい順）', '画面が出ないときなどの原因調べ用', { header: true, height: 56 })
+    const lines = readDebugLog(core, 15)
+    if (!lines.length) row(t, 'まだ記録はありません', null, { color: C.sub })
+    for (const l of lines) row(t, l, null, { height: 44, small: 11 })
   })
+}
+
+// WakeApp/debug-log.txt の新しい行から n 行
+function readDebugLog(core, n) {
+  try {
+    const fm = FileManager.iCloud()
+    const p = core.pathOf('debug-log.txt')
+    if (!fm.fileExists(p) || !fm.isFileDownloaded(p)) return []
+    return fm.readString(p).split('\n').filter(x => x).slice(0, n)
+  } catch (e) {
+    return []
+  }
 }
 
 module.exports = { home, routine, belongings, records, settings, diagnose, info, tasks, toggleSkip, weekChart, useTheme }
