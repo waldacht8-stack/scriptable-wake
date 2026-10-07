@@ -106,7 +106,7 @@ module.exports = function (core, dawn, ui, notify, settings) {
       if (wake) m.lines.push('アラーム' + N(cfg.stages.length) + 'つ　' + cfg.stages.map(s => core.shortTime(s.time)).join('・'))
       const next = optional(core.tasksFor, data, tomorrow) || []
       if (next.length) m.lines.push(label + 'やること　' + next.join('・'))
-      m.primary = prepared ? (typeof ui.tasks === 'function' ? ['tasks', label + 'やることを書く'] : null) : ['plan', 'アラームを準備する']
+      m.primary = prepared ? (typeof core.setTasks === 'function' ? ['panel:tasks', label + 'やることを書く'] : null) : ['plan', 'アラームを準備する']
       const skipped = data.state.skipDates.indexOf(core.dateKey(tomorrow)) >= 0
       if (typeof ui.toggleSkip === 'function') m.secondary.push(['skip', skipped ? label + 'のお休みを取り消す' : label + 'だけお休みにする'])
     }
@@ -139,6 +139,10 @@ module.exports = function (core, dawn, ui, notify, settings) {
       })),
     }
     m.settings = settings ? settings.model(data) : null
+    // 明日やること（3つまで）。寝る前に書いて、チェックイン後に表示する
+    const tday = core.wakeDayAfter(now)
+    const tl = optional(core.tasksFor, data, tday) || []
+    m.tasks = { day: rel(tday, now), items: [0, 1, 2].map(i => tl[i] || '') }
     return m
   }
 
@@ -253,7 +257,7 @@ function drawSettings(){var h='';(M.settings||[]).forEach(function(s){h+='<div c
 function openPanel(k){P=k;drawPanel();var p=document.getElementById('panel');p.classList.add('open');p.setAttribute('aria-hidden','false')}
 function closePanel(){P=null;var p=document.getElementById('panel');p.classList.remove('open');p.setAttribute('aria-hidden','true')}
 function chart(w){var W=320,H=150,t=18,b=24,l=26,ph=H-t-b,s=(W-l-4)/w.length,bw=Math.min(24,s*.6),o='<svg class="chart" viewBox="0 0 '+W+' '+H+'" role="img" aria-label="週ごとの平均点">';[0,50,100].forEach(function(v){var y=t+ph*(1-v/100);o+='<line x1="'+l+'" x2="'+(W-4)+'" y1="'+y+'" y2="'+y+'" stroke="var(--muted)" stroke-opacity="'+(v?.25:.6)+'" stroke-width="'+(v?.5:1)+'"/><text x="'+(l-6)+'" y="'+(y+4)+'" font-size="10" text-anchor="end" fill="var(--muted)">'+v+'</text>'});w.forEach(function(k,i){var x=l+s*i+(s-bw)/2,last=i===w.length-1;if(k.avg!==null){var y=t+ph*(1-k.avg/100);o+='<rect x="'+x+'" y="'+y+'" width="'+bw+'" height="'+Math.max(2,ph*k.avg/100)+'" rx="4" fill="var(--accent)" fill-opacity="'+(last?1:.5)+'"/><text x="'+(x+bw/2)+'" y="'+(y-4)+'" font-size="10" text-anchor="middle" fill="var(--ink)"'+(last?' font-weight="700"':'')+'>'+k.avg+'</text>'}o+='<text x="'+(l+s*i+s/2)+'" y="'+(H-6)+'" font-size="9" text-anchor="middle" fill="var(--muted)">'+k.label+'</text>'});return o+'</svg>'}
-function drawPanel(){if(!P||!M)return;var h='',T={routine:'朝のルーティン',belongings:'持ち物',records:'起床の記録',settings:'設定'}[P];if(P==='settings')h=drawSettings();
+function drawPanel(){if(!P||!M)return;var h='',T={routine:'朝のルーティン',belongings:'持ち物',records:'起床の記録',settings:'設定',tasks:(M.tasks?M.tasks.day:'')+'やること'}[P];if(P==='settings')h=drawSettings();if(P==='tasks'&&M.tasks){h+='<p class="pnote">3つまで。チェックインしたあとに表示します</p>';M.tasks.items.forEach(function(x,i){h+='<button type="button" class="item'+(x?' on':'')+'" onclick="act(\\'task:'+i+'\\')"><span class="mk">'+(i+1)+'</span><span class="nm">'+(x?esc(x):'タップして書く')+'</span></button>'})}
 if(P==='routine'){var r=M.routine;h+='<p class="pnote">'+esc(r.head)+'</p>'+(r.late?'<p class="pnote late">'+esc(r.late)+'</p>':'');r.items.forEach(function(x,i){h+='<button type="button" class="item '+x.state+'" onclick="act(\\'routine:'+i+'\\')"><span class="mk">'+(x.state==='done'?'✓':'')+'</span><span class="nm">'+esc(x.name)+'</span><span class="mn">'+esc(x.min)+'</span></button>'});if(!r.items.length)h+='<p class="pnote">項目がありません（設定で追加）</p>'}
 if(P==='belongings'){var all=M.belongings.length&&M.belongings.every(function(x){return x.on});h+='<p class="pnote">'+(all?'全部そろいました':'タップして確かめる')+'</p>';M.belongings.forEach(function(x,i){h+='<button type="button" class="item'+(x.on?' on':'')+'" onclick="act(\\'belong:'+i+'\\')"><span class="mk">'+(x.on?'✓':'')+'</span><span class="nm">'+esc(x.name)+'</span></button>'})}
 if(P==='records'){var R=M.records;h+='<div class="stat"><div><span>今週の平均</span><b>'+(R.avg===null?'−':R.avg+'点')+'</b></div><div><span>連続記録</span><b>'+R.streak+'日</b></div></div>'+chart(R.weeks);if(!R.days.length)h+='<p class="pnote">まだ記録がありません</p>';R.days.forEach(function(d){h+='<div class="day"><span>'+esc(d.date)+'　'+esc(d.time)+'　'+esc(d.stage)+'</span><span>'+d.score+'点</span></div>'})}
@@ -328,6 +332,17 @@ setInterval(tick,20000);
     } else if (a === 'speak') {
       const mm = await model(data, now)
       if (mm.speech) await Speech.speak(mm.speech)
+    } else if (a.indexOf('task:') === 0 && typeof core.setTasks === 'function') {
+      const day = core.wakeDayAfter(now)
+      const items = (core.tasksFor(data, day) || []).slice()
+      while (items.length < 3) items.push('')
+      const i = Number(a.slice(5))
+      const v = await ui.askText('やること ' + (i + 1), '空にすると消えます', items[i], '例：ゴミ出し')
+      if (v !== null) {
+        items[i] = v
+        core.setTasks(data, day, items.filter(x => x))
+        core.saveState(data)
+      }
     } else if (a.indexOf('set:') === 0 && settings) {
       await settings.edit(ctx, a.slice(4))
     } else if (a === 'design') {
