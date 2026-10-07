@@ -43,6 +43,8 @@ const DEFAULT_CONFIG = {
   shortcutPlan: 'アラーム準備',
   weeklyDay: 0,                 // 週の振り返りを送る曜日（0＝日曜）
   weeklyTime: '21:00',
+  ownRule: '',                  // 最終段階まで寝た朝に表示する自分ルール（F-20）
+  weatherLocation: null,        // 天気の場所 { lat, lon, name }（F-17）。null なら天気を取らない
 }
 
 // ---------- 日付と時刻 ----------
@@ -209,6 +211,9 @@ function normalizeConfig(raw) {
   if (typeof c.shortcutPlan === 'string' && c.shortcutPlan) out.shortcutPlan = c.shortcutPlan
   if (Number.isInteger(c.weeklyDay) && c.weeklyDay >= 0 && c.weeklyDay <= 6) out.weeklyDay = c.weeklyDay
   if (isTime(c.weeklyTime)) out.weeklyTime = normalizeTime(c.weeklyTime)
+  if (typeof c.ownRule === 'string') out.ownRule = c.ownRule.trim()
+  const w = c.weatherLocation
+  if (w && Number.isFinite(w.lat) && Number.isFinite(w.lon)) out.weatherLocation = { lat: w.lat, lon: w.lon, name: String(w.name || '') }
   return out
 }
 
@@ -239,7 +244,7 @@ async function loadAll() {
   if ((c.value === null && !c.broken && !c.unreadable) || old) {
     try { writeJSON('config.json', config) } catch (e) { /* 書けなくても動作は続ける */ }
   }
-  const state = Object.assign({ plan: null, skipDates: [], routine: null, belongings: null, weeklySent: null }, s.value || {})
+  const state = Object.assign({ plan: null, skipDates: [], routine: null, belongings: null, weeklySent: null, tasks: null, weather: null }, s.value || {})
   if (!Array.isArray(state.skipDates)) state.skipDates = []
   const sessions = h.value && Array.isArray(h.value.sessions) ? h.value.sessions : []
   return {
@@ -397,6 +402,30 @@ function alarmsText(cfg) {
   const last = cfg.stages[cfg.stages.length - 1]
   return shortTime(cfg.stages[0].time) + ' 起床・アラーム' + cfg.stages.length + 'つ' +
     (cfg.stages.length > 1 ? '（' + shortTime(last.time) + 'まで）' : '')
+}
+
+// ---------- 明日やること（F-18）・自分ルール（F-20）・天気（F-17） ----------
+
+// その日の「やること」（最大3つ）。寝る前に翌日分を入力する
+function tasksFor(data, day) {
+  const t = data.state.tasks
+  return t && t.date === dateKey(day) && Array.isArray(t.items) ? t.items.filter(x => x) : []
+}
+
+function setTasks(data, day, items) {
+  data.state.tasks = { date: dateKey(day), items: items.map(x => String(x || '').trim()).slice(0, 3) }
+}
+
+// 寝坊した朝か（最終段階まで寝た・未チェックイン）
+function overslept(cfg, session) {
+  if (!session) return false
+  return !isCheckedIn(session) || session.wokeStage >= cfg.stages.length - 1
+}
+
+// 保存済みの今日の天気の文（なければ null）
+function weatherFor(data, day) {
+  const w = data.state.weather
+  return w && w.date === dateKey(day) ? w.text : null
 }
 
 function routineTotal(cfg) {
@@ -657,6 +686,7 @@ module.exports = {
   loadAll, saveConfig, saveState, saveSessions, normalizeConfig, pathOf,
   dayConfig, isRuleWakeDay, isWakeDay, planTargetDay, decidePlan, holidayName,
   sessionOf, isCheckedIn, stageAt, scoreOf, stageLabel, checkin, canCheckin, settleMissed, recentSessions, average, streak, routineTotal, wakeTime, alarmsText,
+  tasksFor, setTasks, overslept, weatherFor,
   routineStatus, advanceRoutine,
   presleepStart, bedtimeAt, wakeDayAfter, nextWake, phaseAt,
   loadTodos, fmtDue, isOverdue, firstTodoOn,

@@ -2,10 +2,11 @@
 // ショートカットから呼ばれる処理（アラーム準備・チェックインなど）。起床.js と、
 // 文字入力なしで使える専用スクリプト（起床 準備.js・起床 チェックイン.js・起床 NFC.js）が共通で使う。
 // core・notify は呼び出し側から渡す（importModule の相対パス解決に依存しないため）
-//   使い方：const actions = importModule('wake-lib/actions')(core, notify)
+//   使い方：const actions = importModule('wake-lib/actions')(core, notify, importModule('wake-lib/weather'))
+//   （weather は省略可。省略すると天気を取らない）
 //   ※ 失敗したときは「アラームが鳴る側」に倒す（plan はエラーでも ON、checkin はエラーなら NG）
 
-module.exports = function (core, notify) {
+module.exports = function (core, notify, weather) {
 
   function messageOf(e) {
     return e && e.message ? e.message : String(e)
@@ -44,6 +45,29 @@ module.exports = function (core, notify) {
     return d.wake ? 'ON' : 'OFF'
   }
 
+  // チェックイン後の知らせに足す行：天気（F-17）・今日やること（F-18）・自分ルール（F-20）。
+  // どれが失敗してもチェックインは止めない
+  async function morningExtras(data, now, session) {
+    const cfg = data.config
+    const lines = []
+    try {
+      if (weather) {
+        const w = await weather.today(cfg)
+        if (w) {
+          data.state.weather = { date: core.dateKey(now), text: w }
+          core.saveState(data)
+          lines.push('天気：' + w)
+        }
+      }
+    } catch (e) {
+      console.warn('天気: ' + e)
+    }
+    const tasks = core.tasksFor(data, now)
+    if (tasks.length) lines.push('今日やること：' + tasks.join('・'))
+    if (cfg.ownRule && core.overslept(cfg, session)) lines.push('自分ルール：' + cfg.ownRule)
+    return lines.length ? '\n' + lines.join('\n') : ''
+  }
+
   async function doCheckin(data, now, code, method) {
     const r = core.checkin(data, now, code, method)
     if (r.result === 'register') {
@@ -73,6 +97,7 @@ module.exports = function (core, notify) {
         console.error('持ち物の通知を予約できませんでした: ' + e)
       }
       await housekeeping(data, now)
+      r.message += await morningExtras(data, now, r.session)
     }
     last = r.message
     await notify.now('☀️ おはようございます', r.message, core.appURL({ view: 'home' }))

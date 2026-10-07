@@ -156,6 +156,22 @@ async function home(ctx) {
       if (s) row(t, '今朝：' + (s.checkinAt ? core.fmtTime(new Date(s.checkinAt)) + ' ' : '') + core.stageLabel(cfg, s.wokeStage), s.score + '点', { height: 60 })
     }
 
+    // 今日の天気・やること・自分ルール（チェックイン後）
+    if (ph.phase === 'morning' || ph.phase === 'day') {
+      const w = core.weatherFor(data, now)
+      if (w) row(t, '🌤 ' + w, null, { height: 50 })
+      for (const task of core.tasksFor(data, now)) row(t, '☐ ' + task, '今日やること', { height: 56 })
+      if (cfg.ownRule && core.overslept(cfg, core.sessionOf(data, now))) row(t, '📌 ' + cfg.ownRule, '自分ルール（寝坊した朝）', { height: 60, color: C.warn })
+    }
+    // 明日やること（寝る前に入力）
+    if (ph.phase === 'day' || ph.phase === 'night' || ph.phase === 'presleep') {
+      const day = core.wakeDayAfter(now)
+      const list = core.tasksFor(data, day)
+      row(t, '📝 ' + core.dayLabel(day, now) + 'やること', list.length ? list.join('・') : '3つまで入力できます（チェックイン後に表示）', {
+        height: 60, onSelect: async () => { await tasks(ctx, day); render() },
+      })
+    }
+
     space(t)
     row(t, '🧭 朝のルーティン', null, { onSelect: async () => { await routine(ctx); render() } })
     row(t, '🎒 持ち物チェック', null, { onSelect: async () => { await belongings(ctx); render() } })
@@ -171,6 +187,29 @@ async function home(ctx) {
     })
     row(t, '⚙️ 設定', null, { onSelect: async () => { await settings(ctx); render() } })
     row(t, '🔧 動作確認', null, { onSelect: async () => { await diagnose(ctx); render() } })
+  })
+}
+
+// 明日やること（F-18）：3つまで
+async function tasks(ctx, day) {
+  const { core, data } = ctx
+  await screen((t, render) => {
+    const items = core.tasksFor(data, day)
+    while (items.length < 3) items.push('')
+    row(t, core.dayLabel(day, new Date()) + 'やること', 'チェックインしたあとに表示します', { header: true, height: 60 })
+    items.forEach((x, i) => {
+      row(t, (i + 1) + '. ' + (x || '（タップして入力）'), null, {
+        height: 56, color: x ? null : C.sub,
+        onSelect: async () => {
+          const v = await askText('やること ' + (i + 1), '空にすると消えます', x, '例：ゴミ出し')
+          if (v === null) return
+          items[i] = v
+          core.setTasks(data, day, items.filter(y => y))
+          core.saveState(data)
+          render()
+        },
+      })
+    })
   })
 }
 
@@ -423,6 +462,35 @@ async function settings(ctx) {
     })
     row(t, '通知　出発の' + cfg.belongingsMinutes + '分前', null, {
       onSelect: edit(async () => { const v = await askNumber('出発の何分前に通知するか', cfg.belongingsMinutes); if (v === null) return false; cfg.belongingsMinutes = Math.min(120, v) }),
+    })
+
+    row(t, '寝坊した朝', null, { header: true })
+    row(t, '自分ルール', cfg.ownRule || '未設定（最終段階まで寝た朝に表示します）', {
+      height: 56, onSelect: edit(async () => { const v = await askText('自分ルール', '最終段階まで寝てしまった朝に表示します。空にすると表示しません', cfg.ownRule, '例：今夜は23時にスマホを置く'); if (v === null) return false; cfg.ownRule = v }),
+    })
+
+    row(t, '天気', null, { header: true })
+    row(t, '天気の場所', cfg.weatherLocation ? (cfg.weatherLocation.name || '登録済み') + '（チェックインのときに今日の天気を知らせます）' : '未設定（タップして現在地を登録）', {
+      height: 56,
+      onSelect: edit(async () => {
+        const i = await choose('天気の場所', cfg.weatherLocation ? ['いまいる場所に変える', '天気を使わない'] : ['いまいる場所を登録'], '天気は Open-Meteo（無料）から取ります')
+        if (i < 0) return false
+        if (cfg.weatherLocation && i === 1) { cfg.weatherLocation = null; return }
+        try {
+          Location.setAccuracyToThreeKilometers()
+          const p = await Location.current()
+          let name = ''
+          try {
+            const g = await Location.reverseGeocode(p.latitude, p.longitude, 'ja_JP')
+            if (g && g[0]) name = [g[0].administrativeArea, g[0].locality].filter(x => x).join(' ')
+          } catch (e) { /* 地名が取れなくても場所は使える */ }
+          // 天気には3km程度の精度で十分。細かい位置は保存しない
+          cfg.weatherLocation = { lat: Math.round(p.latitude * 100) / 100, lon: Math.round(p.longitude * 100) / 100, name }
+        } catch (e) {
+          await info('現在地を取得できません', '設定 > Scriptable > 位置情報 を「使用中のみ」にしてください')
+          return false
+        }
+      }),
     })
 
     row(t, '週の振り返り', null, { header: true })

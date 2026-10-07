@@ -9,7 +9,7 @@
 
 const core = importModule('wake-lib/core')
 const notify = importModule('wake-lib/notify')
-const actions = importModule('wake-lib/actions')(core, notify)
+const actions = importModule('wake-lib/actions')(core, notify, importModule('wake-lib/weather'))
 
 const r = await actions.run('tap')
 const msg = actions.lastMessage()

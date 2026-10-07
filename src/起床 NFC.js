@@ -7,7 +7,7 @@
 
 const core = importModule('wake-lib/core')
 const notify = importModule('wake-lib/notify')
-const actions = importModule('wake-lib/actions')(core, notify)
+const actions = importModule('wake-lib/actions')(core, notify, importModule('wake-lib/weather'))
 
 const r = await actions.run('nfc')
 if (r !== 'OK') throw new Error(actions.lastMessage() || 'チェックインできませんでした。アラームはそのままです')
