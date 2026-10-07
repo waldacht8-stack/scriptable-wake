@@ -537,4 +537,4 @@ async function diagnose(ctx) {
   })
 }
 
-module.exports = { home, routine, belongings, records, settings, diagnose, info }
+module.exports = { home, routine, belongings, records, settings, diagnose, info, tasks, toggleSkip }
