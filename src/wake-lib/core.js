@@ -442,6 +442,15 @@ function checkin(data, now, code, method) {
   return { result: 'ok', message: msg, session }
 }
 
+// 今チェックインを受け付けるか（起床日・未チェックイン・受付時間内）。ウィジェットのタップ先を決めるのに使う
+function canCheckin(data, now) {
+  const cfg = data.config
+  const today = startOfDay(now)
+  if (sessionOf(data, today) || !isWakeDay(data, today)) return false
+  const opens = addMinutes(at(today, cfg.stages[0].time), -cfg.checkinOpensMinutes)
+  return now >= opens && now < at(today, cfg.noon)
+}
+
 // 正午を過ぎても記録のない起床日を「未チェックイン（0点）」にする。追加した件数を返す
 function settleMissed(data, now) {
   let added = 0
@@ -646,7 +655,7 @@ module.exports = {
   pad2, dateKey, startOfDay, addDays, addMinutes, at, isTime, normalizeTime, fmtTime, fmtDate, fmtDuration, shortTime, isoLocal, dayLabel,
   loadAll, saveConfig, saveState, saveSessions, normalizeConfig, pathOf,
   dayConfig, isRuleWakeDay, isWakeDay, planTargetDay, decidePlan, holidayName,
-  sessionOf, isCheckedIn, stageAt, scoreOf, stageLabel, checkin, settleMissed, recentSessions, average, streak, routineTotal, wakeTime, alarmsText,
+  sessionOf, isCheckedIn, stageAt, scoreOf, stageLabel, checkin, canCheckin, settleMissed, recentSessions, average, streak, routineTotal, wakeTime, alarmsText,
   routineStatus, advanceRoutine,
   presleepStart, bedtimeAt, wakeDayAfter, nextWake, phaseAt,
   loadTodos, fmtDue, isOverdue, firstTodoOn,

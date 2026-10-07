@@ -110,6 +110,7 @@ module.exports = function (core, notify) {
       if (cmd === 'plan') return await plan(data, now)
       if (cmd === 'checkin') return await doCheckin(data, now, p.slice(p.indexOf(':') + 1).trim(), 'barcode')
       if (cmd === 'nfc') return await doCheckin(data, now, '', 'nfc')
+      if (cmd === 'tap') return await doCheckin(data, now, '', 'widget')
       if (cmd === 'skip') return await skip(data, now)
       if (cmd === 'noon') {
         const n = core.settleMissed(data, now)

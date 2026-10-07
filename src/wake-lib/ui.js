@@ -120,8 +120,8 @@ async function home(ctx) {
 
     if (ph.phase === 'waking') {
       const idx = core.stageAt(cfg, now)
-      row(t, '⏰ チェックインして', '段階' + (Math.max(0, idx) + 1) + 'が鳴っています', { big: 30, height: 110, center: true, bg: C.card })
-      row(t, '📷 チェックインを開く', 'ショートカット「起床チェックイン」', {
+      row(t, '⏰ 起きたらチェックイン', '段階' + (Math.max(0, idx) + 1) + 'が鳴っています', { big: 30, height: 110, center: true, bg: C.card })
+      row(t, '☀️ チェックインする', '残りのアラームをオフにして記録します', {
         big: 22, height: 90, center: true,
         onSelect: () => openShortcut(core, '起床チェックイン'),
       })
@@ -296,7 +296,7 @@ async function records(ctx) {
     for (const s of list) {
       const d = new Date(s.date + 'T00:00:00')
       const time = s.checkinAt ? core.fmtTime(new Date(s.checkinAt)) : '−'
-      row(t, core.fmtDate(d) + '　' + time + '　' + s.score + '点', core.stageLabel(cfg, s.wokeStage) + (s.method === 'nfc' ? '・NFC' : '') + (s.late ? '・遅れぎみ' : ''), { height: 54 })
+      row(t, core.fmtDate(d) + '　' + time + '　' + s.score + '点', core.stageLabel(cfg, s.wokeStage) + (s.method === 'nfc' ? '・NFC' : s.method === 'barcode' ? '・バーコード' : '') + (s.late ? '・遅れぎみ' : ''), { height: 54 })
     }
   })
 }
@@ -378,16 +378,7 @@ async function settings(ctx) {
     })
 
     row(t, 'チェックイン', null, { header: true })
-    row(t, 'バーコード　' + (cfg.checkinCode ? '登録済み' : '未登録'), cfg.checkinCode ? cfg.checkinCode : '「起床チェックイン」で最初に読んだコードを登録します', {
-      height: 56,
-      onSelect: edit(async () => {
-        const i = await choose('バーコード', ['登録を消す（次に読んだコードを登録）', '数字を手で入力'])
-        if (i === 0) cfg.checkinCode = ''
-        else if (i === 1) { const v = await askText('バーコードの数字', null, cfg.checkinCode); if (v === null) return false; cfg.checkinCode = v }
-        else return false
-      }),
-    })
-    row(t, '受付開始　最初のアラームの' + cfg.checkinOpensMinutes + '分前から', '夜に読んでもアラームはオフになりません', {
+    row(t, '受付開始　最初のアラームの' + cfg.checkinOpensMinutes + '分前から', '夜にタップしてもアラームはオフになりません', {
       height: 56, onSelect: edit(async () => { const v = await askNumber('最初のアラームの何分前から受け付けるか', cfg.checkinOpensMinutes); if (v === null) return false; cfg.checkinOpensMinutes = Math.min(720, v) }),
     })
 

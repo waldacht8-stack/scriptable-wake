@@ -81,7 +81,7 @@ function waking(core, data, now, family, w) {
   const idx = core.stageAt(cfg, now)
   const cur = cfg.stages[Math.max(0, idx)]
   const next = cfg.stages[idx + 1]
-  if (family === 'accessoryInline') return text(w, '⏰ チェックインして（段階' + (Math.max(0, idx) + 1) + '）', 13)
+  if (family === 'accessoryInline') return text(w, '⏰ タップでチェックイン（段階' + (Math.max(0, idx) + 1) + '）', 13)
   if (family === 'accessoryCircular') {
     w.addAccessoryWidgetBackground = true
     w.addSpacer()
@@ -92,7 +92,7 @@ function waking(core, data, now, family, w) {
   }
   text(w, '⏰ 段階' + (cur.index + 1) + '・' + cur.name, 15)
   text(w, next ? '次 ' + core.shortTime(next.time) + ' 段階' + (next.index + 1) : 'これが最終段階', 13, { regular: true })
-  text(w, 'チェックインして止める', 13, { regular: true })
+  text(w, 'タップでチェックイン', 13)
 }
 
 function morning(core, data, now, family, w) {
@@ -216,7 +216,8 @@ async function build(core, data, family, now, param) {
   w.refreshAfterDate = new Date(Math.min(ph.until.getTime() + 1000, now.getTime() + 15 * 60000))
   // タップで開く画面
   const todoApp = 'scriptable:///run/' + encodeURIComponent('TODO')
-  w.url = phase === 'day' ? todoApp : phase === 'morning' ? core.appURL({ action: 'next' }) : core.appURL({ view: 'home' })
+  // 起床中（と、アラーム前に自分で起きたとき）はタップでチェックイン（ショートカットが残りのアラームをオフにする）
+  w.url = phase === 'waking' || core.canCheckin(data, now) ? core.shortcutURL('起床チェックイン') : phase === 'day' ? todoApp : phase === 'morning' ? core.appURL({ action: 'next' }) : core.appURL({ view: 'home' })
 
   const needTodos = (phase === 'day' && f !== 'accessoryCircular') || phase === 'night'
   const todos = needTodos ? await core.loadTodos(data.config) : { ok: false, items: [] }
