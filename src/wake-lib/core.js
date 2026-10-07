@@ -77,8 +77,9 @@ function normalizeTime(s) {
   let m = t.match(/^(\d{1,2}):(\d{1,2})$/)
   if (!m) m = t.match(/^(\d{1,2})(\d{2})$/)
   if (!m) return null
-  const h = Number(m[1])
+  let h = Number(m[1])
   const min = Number(m[2])
+  if (h === 24 && min === 0) h = 0 // 「24:00」は 0:00 として受け付ける
   if (h > 23 || min > 59) return null
   return pad2(h) + ':' + pad2(min)
 }
