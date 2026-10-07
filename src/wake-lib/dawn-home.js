@@ -259,23 +259,45 @@ setInterval(tick,20000);
     }
   }
 
+  function wait(ms) {
+    return new Promise(resolve => {
+      const t = new Timer()
+      t.timeInterval = ms
+      t.schedule(() => resolve(null))
+    })
+  }
+
   async function present(ctx) {
+    const log = ctx.log || (() => {})
     const wv = new WebView()
-    await wv.loadHTML(page(await model(ctx.data, new Date())))
+    const html = page(await model(ctx.data, new Date()))
+    log('ホーム画面の中身を作成（' + html.length + '文字）')
+    // 読み込みの完了が知らされないことがあっても、3秒で表示に進む
+    await Promise.race([wv.loadHTML(html), wait(3000)])
+    log('ホーム画面を表示')
     let closed = false
     const shown = wv.present(true).then(() => { closed = true })
+    await wait(300)
     while (!closed) {
-      const a = await Promise.race([wv.evaluateJavaScript(WAIT, true), shown.then(() => null)])
+      let a = null
+      try {
+        a = await Promise.race([wv.evaluateJavaScript(WAIT, true), shown.then(() => null)])
+      } catch (e) {
+        // ボタンの受け取りができない場合も、画面は閉じるまで見られるようにする
+        log('ボタンを受け取れません: ' + (e && e.message ? e.message : e))
+        await shown
+        break
+      }
       if (closed || !a) break
+      log('ボタン: ' + a)
       try {
         await handle(ctx, a)
       } catch (e) {
-        console.error(e)
+        log('ボタンの処理でエラー: ' + (e && e.message ? e.message : e))
       }
       if (closed) break
       await wv.evaluateJavaScript('render(' + JSON.stringify(await model(ctx.data, new Date())) + ')')
     }
   }
-
   return { model, page, present, handle }
 }
