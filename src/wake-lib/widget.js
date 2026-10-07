@@ -81,17 +81,17 @@ function waking(core, data, now, family, w) {
   const idx = core.stageAt(cfg, now)
   const cur = cfg.stages[Math.max(0, idx)]
   const next = cfg.stages[idx + 1]
-  if (family === 'accessoryInline') return text(w, '⏰ チェックインして（段階' + Math.max(0, idx) + '）', 13)
+  if (family === 'accessoryInline') return text(w, '⏰ チェックインして（段階' + (Math.max(0, idx) + 1) + '）', 13)
   if (family === 'accessoryCircular') {
     w.addAccessoryWidgetBackground = true
     w.addSpacer()
     centered(w, '段階', 10, true)
-    centered(w, Math.max(0, idx), 26)
+    centered(w, Math.max(0, idx) + 1, 26)
     w.addSpacer()
     return
   }
-  text(w, '⏰ 段階' + cur.index + '・' + cur.name, 15)
-  text(w, next ? '次 ' + core.shortTime(next.time) + ' 段階' + next.index : 'これが最終段階', 13, { regular: true })
+  text(w, '⏰ 段階' + (cur.index + 1) + '・' + cur.name, 15)
+  text(w, next ? '次 ' + core.shortTime(next.time) + ' 段階' + (next.index + 1) : 'これが最終段階', 13, { regular: true })
   text(w, 'チェックインして止める', 13, { regular: true })
 }
 
@@ -169,7 +169,7 @@ function night(core, data, now, family, w, todos, ph) {
   const tomorrow = core.wakeDayAfter(now)
   const label = relDay(core, tomorrow, now)
   text(w, core.isWakeDay(data, tomorrow)
-    ? label + ' ' + core.shortTime(core.wakeTime(cfg)) + ' 起床・段階' + cfg.stages.length + 'つ'
+    ? label + ' ' + core.alarmsText(cfg)
     : label + 'はアラームなし', 14)
   const first = todos.ok ? core.firstTodoOn(todos.items, tomorrow) : null
   text(w, first ? label + '：' + first.title : todos.ok ? '明日の予定なし' : 'Todoを読み込めません', 13, { regular: true })
@@ -195,7 +195,7 @@ function presleep(core, data, now, family, w) {
   if (family === 'accessoryInline') return text(w, head, 13)
   text(w, head, 15)
   if (soon) {
-    text(w, '段階' + cfg.stages.length + 'つ・' + core.fmtTime(nw.start) + 'から', 13, { regular: true })
+    text(w, 'アラーム' + cfg.stages.length + 'つ（' + core.shortTime(cfg.stages[cfg.stages.length - 1].time) + 'まで）', 13, { regular: true })
     text(w, '今寝ると ' + core.fmtDuration(nw.start - now), 13, { regular: true })
   } else if (nw) {
     text(w, '次の起床 ' + core.fmtDate(nw.day) + ' ' + core.shortTime(core.wakeTime(cfg)), 13, { regular: true })

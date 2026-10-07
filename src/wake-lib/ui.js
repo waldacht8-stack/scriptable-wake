@@ -120,7 +120,7 @@ async function home(ctx) {
 
     if (ph.phase === 'waking') {
       const idx = core.stageAt(cfg, now)
-      row(t, '⏰ チェックインして', '段階' + Math.max(0, idx) + 'が鳴っています', { big: 30, height: 110, center: true, bg: C.card })
+      row(t, '⏰ チェックインして', '段階' + (Math.max(0, idx) + 1) + 'が鳴っています', { big: 30, height: 110, center: true, bg: C.card })
       row(t, '📷 チェックインを開く', 'ショートカット「起床チェックイン」', {
         big: 22, height: 90, center: true,
         onSelect: () => openShortcut(core, '起床チェックイン'),
@@ -147,7 +147,7 @@ async function home(ctx) {
       const head = nw
         ? '⏰ ' + core.dayLabel(nw.day, now) + ' ' + core.shortTime(core.wakeTime(cfg)) + ' 起床'
         : '⏰ 2週間以内の起床予定なし'
-      const sub = nw ? '段階' + cfg.stages.length + 'つ・' + core.fmtTime(nw.start) + 'から' : ''
+      const sub = nw ? core.alarmsText(cfg) : ''
       row(t, head, sub, { big: 24, height: 100, center: true, bg: C.card })
       row(t, prepared ? (p.wake ? '✓ アラーム準備済み' : '・アラームなし') : '▶ アラーム準備を実行', prepared ? p.reason : 'ショートカット「' + cfg.shortcutPlan + '」', {
         height: 64, onSelect: () => openShortcut(core, cfg.shortcutPlan),
@@ -322,16 +322,16 @@ async function settings(ctx) {
 
     row(t, '段階アラーム', '時計アプリのアラームも同じ時刻・ラベルにしてください', { header: true, height: 60 })
     cfg.stages.forEach(s => {
-      row(t, '段階' + s.index + '　' + core.shortTime(s.time) + '　' + s.name, 'ラベル「' + s.clockLabel + '」・' + s.score + '点', {
+      row(t, '段階' + (s.index + 1) + '　' + core.shortTime(s.time) + '　' + s.name, 'ラベル「' + s.clockLabel + '」・' + s.score + '点', {
         height: 56,
         onSelect: edit(async () => {
-          const i = await choose('段階' + s.index, ['時刻を変える', '名前を変える', '点数を変える', 'この段階を削除'])
-          if (i === 0) { const v = await askTime(core, '段階' + s.index + 'の時刻', s.time); if (!v) return false; s.time = v }
+          const i = await choose('段階' + (s.index + 1), ['時刻を変える', '名前を変える', '点数を変える', 'この段階を削除'])
+          if (i === 0) { const v = await askTime(core, '段階' + (s.index + 1) + 'の時刻', s.time); if (!v) return false; s.time = v }
           else if (i === 1) { const v = await askText('名前', null, s.name); if (!v) return false; s.name = v }
           else if (i === 2) { const v = await askNumber('点数（0〜100）', s.score); if (v === null) return false; s.score = Math.min(100, v) }
           else if (i === 3) {
             if (cfg.stages.length <= 1) { await info('段階は1つ以上必要です'); return false }
-            if (!(await confirm('段階' + s.index + 'を削除しますか？', '時計アプリの「' + s.clockLabel + '」とショートカットも合わせて直してください', '削除'))) return false
+            if (!(await confirm('段階' + (s.index + 1) + 'を削除しますか？', '時計アプリの「' + s.clockLabel + '」とショートカットも合わせて直してください', '削除'))) return false
             cfg.stages.splice(s.index, 1)
             cfg.stages.forEach(x => { x.clockLabel = '' }) // 番号を振り直す
           } else return false
@@ -387,8 +387,8 @@ async function settings(ctx) {
         else return false
       }),
     })
-    row(t, '受付開始　段階0の' + cfg.checkinOpensMinutes + '分前から', '夜に読んでもアラームはオフになりません', {
-      height: 56, onSelect: edit(async () => { const v = await askNumber('段階0の何分前から受け付けるか', cfg.checkinOpensMinutes); if (v === null) return false; cfg.checkinOpensMinutes = Math.min(720, v) }),
+    row(t, '受付開始　最初のアラームの' + cfg.checkinOpensMinutes + '分前から', '夜に読んでもアラームはオフになりません', {
+      height: 56, onSelect: edit(async () => { const v = await askNumber('最初のアラームの何分前から受け付けるか', cfg.checkinOpensMinutes); if (v === null) return false; cfg.checkinOpensMinutes = Math.min(720, v) }),
     })
 
     row(t, '朝のルーティン（合計' + core.routineTotal(cfg) + '分）', null, { header: true })

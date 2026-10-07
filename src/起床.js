@@ -98,7 +98,7 @@ function nextText(data, now) {
   const cfg = data.config
   const t = core.at(nw.day, core.wakeTime(cfg))
   return '次の起床は ' + core.dayLabel(nw.day, now) + ' ' + t.getHours() + '時' + (t.getMinutes() ? t.getMinutes() + '分' : '') +
-    '、段階' + cfg.stages.length + 'つです'
+    '、アラーム' + cfg.stages.length + 'つです'
 }
 
 async function runShortcut(param) {

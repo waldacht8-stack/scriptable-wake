@@ -9,10 +9,10 @@ const PHASE_NAMES = { waking: '起床中', morning: '朝', day: '昼間', night:
 
 const DEFAULT_CONFIG = {
   stages: [
-    { index: 0, name: 'そっと', clockLabel: '起床-段階0', time: '06:50', score: 100 },
-    { index: 1, name: 'ふつう', clockLabel: '起床-段階1', time: '07:00', score: 85 },
-    { index: 2, name: 'しっかり', clockLabel: '起床-段階2', time: '07:03', score: 70 },
-    { index: 3, name: '最終', clockLabel: '起床-段階3', time: '07:06', score: 40 },
+    { index: 0, name: 'そっと', clockLabel: '起床1', time: '07:00', score: 100 },
+    { index: 1, name: 'ふつう', clockLabel: '起床2', time: '07:10', score: 85 },
+    { index: 2, name: 'しっかり', clockLabel: '起床3', time: '07:20', score: 70 },
+    { index: 3, name: '最終', clockLabel: '起床4', time: '07:30', score: 40 },
   ],
   days: {
     sun: { wake: false, departure: null },
@@ -179,8 +179,8 @@ function normalizeConfig(raw) {
   }
   out.stages = out.stages.map((s, i) => ({
     index: i,
-    name: s.name || '段階' + i,
-    clockLabel: s.clockLabel || '起床-段階' + i,
+    name: s.name || '段階' + (i + 1),
+    clockLabel: s.clockLabel || '起床' + (i + 1),
     time: s.time,
     score: s.score,
   }))
@@ -229,9 +229,13 @@ async function loadAll() {
   const c = await read('config.json')
   const s = await read('state.json')
   const h = await read('sessions.json')
+  // 最初の版の初期値（6:50〜7:06、ラベル「起床-段階N」）のままなら、今の初期値（時計アプリの起床1〜4）に置き換える
+  const old = c.value && Array.isArray(c.value.stages) && c.value.stages.map(x => x && x.time).join(',') === '06:50,07:00,07:03,07:06' &&
+    c.value.stages.every((x, i) => x.clockLabel === '起床-段階' + i)
+  if (old) c.value.stages = clone(DEFAULT_CONFIG.stages)
   const config = normalizeConfig(c.value)
   // 初回は初期設定を書き出す（利用者がファイルを見て直せるように）
-  if (c.value === null && !c.broken && !c.unreadable) {
+  if ((c.value === null && !c.broken && !c.unreadable) || old) {
     try { writeJSON('config.json', config) } catch (e) { /* 書けなくても動作は続ける */ }
   }
   const state = Object.assign({ plan: null, skipDates: [], routine: null, belongings: null, weeklySent: null }, s.value || {})
@@ -335,7 +339,7 @@ async function decidePlan(data, now) {
     const h = await holidayName(cfg, day)
     if (h) return { date: key, wake: false, reason: label + 'は祝日（' + h + '）です' }
   }
-  return { date: key, wake: true, reason: label + ' ' + shortTime(cfg.stages[0].time) + 'から段階' + cfg.stages.length + 'つ' }
+  return { date: key, wake: true, reason: label + ' ' + alarmsText(cfg) }
 }
 
 function dayLabel(day, now) {
@@ -370,7 +374,7 @@ function stageLabel(cfg, idx) {
   if (idx === null || idx === undefined) return '未チェックイン'
   if (idx < 0) return '自力で起床'
   const s = cfg.stages[idx]
-  return '段階' + idx + (s ? '（' + s.name + '）' : '')
+  return '段階' + (idx + 1) + (s ? '（' + s.name + '）' : '')
 }
 
 // ISO 8601（日本時間の +09:00 など端末のタイムゾーンつき）
@@ -382,9 +386,16 @@ function isoLocal(d) {
     sign + pad2(Math.floor(a / 60)) + ':' + pad2(a % 60)
 }
 
-// 「起床時刻」として見せる時刻（段階1。段階が1つなら段階0）
+// 「起床時刻」として見せる時刻（最初のアラーム）
 function wakeTime(cfg) {
-  return (cfg.stages[1] || cfg.stages[0]).time
+  return cfg.stages[0].time
+}
+
+// 「7:00 起床・アラーム4つ（7:30まで）」の後半
+function alarmsText(cfg) {
+  const last = cfg.stages[cfg.stages.length - 1]
+  return shortTime(cfg.stages[0].time) + ' 起床・アラーム' + cfg.stages.length + 'つ' +
+    (cfg.stages.length > 1 ? '（' + shortTime(last.time) + 'まで）' : '')
 }
 
 function routineTotal(cfg) {
@@ -635,7 +646,7 @@ module.exports = {
   pad2, dateKey, startOfDay, addDays, addMinutes, at, isTime, normalizeTime, fmtTime, fmtDate, fmtDuration, shortTime, isoLocal, dayLabel,
   loadAll, saveConfig, saveState, saveSessions, normalizeConfig, pathOf,
   dayConfig, isRuleWakeDay, isWakeDay, planTargetDay, decidePlan, holidayName,
-  sessionOf, isCheckedIn, stageAt, scoreOf, stageLabel, checkin, settleMissed, recentSessions, average, streak, routineTotal, wakeTime,
+  sessionOf, isCheckedIn, stageAt, scoreOf, stageLabel, checkin, settleMissed, recentSessions, average, streak, routineTotal, wakeTime, alarmsText,
   routineStatus, advanceRoutine,
   presleepStart, bedtimeAt, wakeDayAfter, nextWake, phaseAt,
   loadTodos, fmtDue, isOverdue, firstTodoOn,

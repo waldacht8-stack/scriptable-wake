@@ -39,8 +39,7 @@ async function rescheduleBedtime(core, data, now) {
     if (prepared && !data.state.plan.wake) {
       body = '明日はアラームなし（' + data.state.plan.reason + '）。'
     } else if (prepared || core.isWakeDay(data, wakeDay)) {
-      body = '明日は ' + core.shortTime(core.wakeTime(cfg)) + ' 起床・段階' + cfg.stages.length + 'つ（' +
-        core.shortTime(cfg.stages[0].time) + 'から）。'
+      body = '明日は ' + core.alarmsText(cfg) + '。'
       if (!prepared) body += '\nアラーム準備がまだです。この通知をタップして準備してください。'
     } else {
       body = '明日は起床しない曜日です。'
@@ -84,7 +83,7 @@ async function scheduleWeekly(core, data, now) {
 function weeklyBody(core, data, now) {
   const list = core.recentSessions(data, now, 7)
   const ok = list.filter(core.isCheckedIn)
-  const avgStage = ok.length ? (ok.reduce((n, s) => n + Math.max(0, s.wokeStage), 0) / ok.length).toFixed(1) : null
+  const avgStage = ok.length ? (ok.reduce((n, s) => n + s.wokeStage + 1, 0) / ok.length).toFixed(1) : null
   const last = data.config.stages.length - 1
   const overslept = list.filter(s => !core.isCheckedIn(s) || s.wokeStage >= last).length
   const avg = core.average(list)
