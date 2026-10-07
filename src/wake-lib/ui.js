@@ -194,9 +194,9 @@ async function toggleSkip(ctx, target) {
     core.saveState(data)
     await notify.rescheduleBedtime(core, data, new Date())
     if (armed) {
-      // すでにアラームをオンにしてある：アラーム準備をもう一度実行すると「OFF」になり、アラームがオフになる
-      await info(label + 'をお休みにしました', 'アラームがもうオンになっているので、このあと「' + data.config.shortcutPlan + '」を実行してオフにします')
-      openShortcut(core, data.config.shortcutPlan)
+      // すでにアラームをオンにしてある：ショートカット「アラーム準備」はオンにする専用なので、時計アプリで手でオフにしてもらう
+      const labels = data.config.stages.map(s => s.clockLabel).join('・')
+      await info(label + 'をお休みにしました', 'アラームはもうオンになっています。時計アプリで「' + labels + '」をオフにしてください')
     } else {
       await info(label + 'をお休みにしました', '今夜のアラーム準備でアラームはオンになりません')
     }

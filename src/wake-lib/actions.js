@@ -30,12 +30,16 @@ module.exports = function (core, notify) {
   }
 
 
+  // 直前の処理の結果の文（専用スクリプトがエラー文や画面に使う）
+  let last = ''
+
   async function plan(data, now) {
     if (core.settleMissed(data, now)) core.saveSessions(data)
     const d = await core.decidePlan(data, now)
     data.state.plan = d
     core.saveState(data)
     await housekeeping(data, now)
+    last = d.reason
     await notify.now(d.wake ? '⏰ アラームをオンにしました' : '💤 アラームはオンにしません', d.reason)
     return d.wake ? 'ON' : 'OFF'
   }
@@ -44,15 +48,18 @@ module.exports = function (core, notify) {
     const r = core.checkin(data, now, code, method)
     if (r.result === 'register') {
       if (!code) {
+        last = 'コードが読み取れませんでした。アラームはそのままです'
         await notify.now('チェックインできません', 'コードが読み取れませんでした。アラームはそのままです')
         return 'NG'
       }
       data.config.checkinCode = code
       core.saveConfig(data)
+      last = 'コードを登録しました（' + code + '）。明日からこのコードでチェックインできます。アラームはそのままです'
       await notify.now('✅ コードを登録しました', code + '\n明日からこのコードでチェックインできます。アラームはそのままです')
       return 'REGISTERED'
     }
     if (r.result === 'mismatch' || r.result === 'closed') {
+      last = r.message
       await notify.now('チェックインできません', r.message)
       return 'NG'
     }
@@ -67,6 +74,7 @@ module.exports = function (core, notify) {
       }
       await housekeeping(data, now)
     }
+    last = r.message
     await notify.now('☀️ おはようございます', r.message, core.appURL({ view: 'home' }))
     return 'OK'
   }
@@ -118,13 +126,15 @@ module.exports = function (core, notify) {
       if (cmd === 'plan') {
         let on = true
         try { on = data ? core.isRuleWakeDay(data.config, core.planTargetDay(data.config, now)) : true } catch (e2) { on = true }
+        last = 'エラー（' + messageOf(e) + '）。念のため' + (on ? 'アラームをオンにします' : '曜日の設定どおりオンにしません')
         await notify.now('起床：アラーム準備でエラー', messageOf(e) + '\n念のため' + (on ? 'アラームをオンにします' : '曜日の設定どおりオンにしません'))
         return on ? 'ON' : 'OFF'
       }
+      last = 'エラー（' + messageOf(e) + '）。アラームはそのままです'
       await notify.now('起床：エラー', messageOf(e) + (cmd === 'checkin' || cmd === 'nfc' ? '\nアラームはそのままです' : ''))
       return 'NG'
     }
   }
 
-  return { run: runShortcut, housekeeping, messageOf }
+  return { run: runShortcut, housekeeping, messageOf, lastMessage: () => last }
 }
