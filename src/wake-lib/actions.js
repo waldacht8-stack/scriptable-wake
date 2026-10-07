@@ -135,7 +135,18 @@ module.exports = function (core, notify, weather) {
       if (cmd === 'plan') return await plan(data, now)
       if (cmd === 'checkin') return await doCheckin(data, now, p.slice(p.indexOf(':') + 1).trim(), 'barcode')
       if (cmd === 'nfc') return await doCheckin(data, now, '', 'nfc')
-      if (cmd === 'tap') return await doCheckin(data, now, '', 'widget')
+      if (cmd === 'tap') {
+        // 「明日だけオフ」にしたとき、もうオンだったアラームをオフにするために呼ばれた場合
+        const off = data.state.pendingOff
+        if (off && off >= core.dateKey(now) && !core.canCheckin(data, now)) {
+          data.state.pendingOff = null
+          core.saveState(data)
+          last = 'お休みの日のアラームをオフにしました'
+          await notify.now('💤 アラームをオフにしました', last)
+          return 'OK'
+        }
+        return await doCheckin(data, now, '', 'widget')
+      }
       if (cmd === 'skip') return await skip(data, now)
       if (cmd === 'noon') {
         const n = core.settleMissed(data, now)

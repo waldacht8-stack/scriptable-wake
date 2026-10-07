@@ -62,6 +62,12 @@ module.exports = function (core, dawn, ui, notify) {
       if (cfg.ownRule && optional(core.overslept, cfg, session)) m.lines.push('自分ルール　' + cfg.ownRule)
       m.primary = st.complete ? ['belongings', '持ち物を確かめる'] : ['next', W.next(st.current.name)]
       if (st.done > 0) m.secondary.push(['back', 'ひとつ戻す'])
+      m.secondary.push(['speak', '読み上げる'])
+      m.speech = ['出発まで、あと' + Math.max(0, Math.round((st.departure - now) / 60000)) + '分です。',
+        st.lateMinutes ? 'このままだと' + st.lateMinutes + '分遅れます。' : '',
+        weather ? '今日の天気は、' + weather.replace(/ (-?\d+)℃\//, '、最高$1度、最低').replace(/℃/g, '度').replace(/雨(\d+)%/, '雨の確率').replace(/☂.*/, '') + '。' : '',
+        today.length ? '今日やることは、' + today.join('、') + '。' : '',
+        st.complete ? '支度はできています。' : '次は' + st.current.name + 'です。'].join('')
       if (st.complete) m.label = W.done
     } else if (ph.phase === 'day') {
       const todos = await core.loadTodos(cfg)
@@ -74,6 +80,10 @@ module.exports = function (core, dawn, ui, notify) {
       if (todos.ok) for (const t of todos.items.slice(0, 4)) m.lines.push((core.isOverdue(t, now) ? '！' : '・') + t.title + (core.fmtDue(t, now) ? '　' + core.fmtDue(t, now) : ''))
       else m.lines.push('Todoを読み込めません')
       m.primary = ['todo', 'Todo を開く']
+      m.secondary.push(['speak', '読み上げる'])
+      m.speech = [weather ? '今日の天気は、' + weather.replace(/ (-?\d+)℃\//, '、最高$1度、最低').replace(/℃/g, '度').replace(/雨(\d+)%/, '雨の確率').replace(/☂.*/, '') + '。' : '',
+        today.length ? '今日やることは、' + today.join('、') + '。' : '',
+        todos.ok && todos.items.length ? 'Todoは' + todos.items.length + '件です。いちばん近いのは、' + todos.items[0].title + '。' : ''].join('') || '今日の予定はありません。'
     } else {
       // 夜・就寝前
       const tomorrow = core.wakeDayAfter(now)
@@ -237,6 +247,9 @@ setInterval(tick,20000);
       Safari.open('scriptable:///run/' + encodeURIComponent('TODO'))
     } else if (a === 'tasks' && typeof ui.tasks === 'function') {
       await ui.tasks(ctx, core.wakeDayAfter(now))
+    } else if (a === 'speak') {
+      const mm = await model(data, now)
+      if (mm.speech) await Speech.speak(mm.speech)
     } else if (a === 'design') {
       await chooseTheme(data)
     } else if (a === 'skip' && typeof ui.toggleSkip === 'function') {

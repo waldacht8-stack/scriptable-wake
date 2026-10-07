@@ -4,19 +4,66 @@
 
 // ---------- 部品 ----------
 
+// デザインごとの色と書体（ホーム画面・ロック画面と同じデザインに合わせる）
+const STYLES = {
+  dawn: { bg: '#FBEFE3', ink: '#2B2433', muted: '#6B5F70', accent: '#B4482E', card: '#F3E0CC', head: '#EFDCC8', warn: '#B4482E', font: ['HiraMinProN-W6', 'HiraMinProN-W3'] },
+  kissa: { bg: '#EFE2CC', ink: '#3A2A1E', muted: '#7A6450', accent: '#B23A24', card: '#E3CFAF', head: '#E6D3B4', warn: '#B23A24', font: ['HiraMaruProN-W4', 'HiraMaruProN-W4'] },
+  station: { bg: '#0B0B0C', ink: '#F5F5F5', muted: '#9A9A9A', accent: '#FFB300', card: '#1C1C21', head: '#141416', warn: '#FF6B5E', font: ['HiraginoSans-W6', 'HiraginoSans-W3'] },
+  sora: { bg: '#FFFFFF', ink: '#1E2B3C', muted: '#62728A', accent: '#2F6FEB', card: '#EAF2FC', head: '#F2F7FD', warn: '#C2410C', font: ['HiraginoSans-W6', 'HiraginoSans-W3'] },
+}
+let S = STYLES.dawn
+const C = {}
+
+// 画面を開くたびに、設定のデザインを読み直す
+function useTheme(ctx) {
+  const name = ctx && ctx.data && ctx.data.config ? ctx.data.config.theme : 'dawn'
+  S = STYLES[name] || STYLES.dawn
+  C.accent = new Color(S.accent)
+  C.warn = new Color(S.warn)
+  C.sub = new Color(S.muted)
+  C.card = new Color(S.card)
+  C.ink = new Color(S.ink)
+  C.bg = new Color(S.bg)
+  C.head = new Color(S.head)
+}
+useTheme(null)
+
+function fnt(size, bold) {
+  try {
+    return new Font(bold ? S.font[0] : S.font[1], size)
+  } catch (e) {
+    return bold ? Font.boldSystemFont(size) : Font.systemFont(size)
+  }
+}
+
 function row(table, title, subtitle, opts) {
   const o = opts || {}
   const r = new UITableRow()
   r.height = o.height || (subtitle ? 60 : 44)
   r.isHeader = !!o.header
   r.dismissOnSelect = false
+  r.backgroundColor = o.bg || (o.header ? C.head : C.bg)
   const c = r.addText(String(title), subtitle ? String(subtitle) : undefined)
-  c.titleFont = o.big ? Font.boldSystemFont(o.big) : o.header ? Font.boldSystemFont(17) : Font.systemFont(17)
-  if (subtitle) c.subtitleFont = Font.systemFont(o.subSize || 13)
+  c.titleFont = o.big ? fnt(o.big, true) : o.header ? fnt(17, true) : fnt(17, false)
+  c.titleColor = o.color || C.ink
+  if (subtitle) {
+    c.subtitleFont = fnt(o.subSize || 13, false)
+    c.subtitleColor = C.sub
+  }
   if (o.center) c.centerAligned()
-  if (o.color) c.titleColor = o.color
-  if (o.bg) r.backgroundColor = o.bg
   if (o.onSelect) r.onSelect = o.onSelect
+  table.addRow(r)
+  return r
+}
+
+// 絵だけの行（グラフなど）
+function imageRow(table, img, height) {
+  const r = new UITableRow()
+  r.height = height
+  r.backgroundColor = C.bg
+  r.dismissOnSelect = false
+  const c = r.addImage(img)
+  c.centerAligned()
   table.addRow(r)
   return r
 }
@@ -24,16 +71,9 @@ function row(table, title, subtitle, opts) {
 function space(table, h) {
   const r = new UITableRow()
   r.height = h || 12
+  r.backgroundColor = C.bg
   table.addRow(r)
 }
-
-const C = {
-  accent: Color.dynamic(new Color('#1D4ED8'), new Color('#6EA0FF')),
-  warn: Color.dynamic(new Color('#C2410C'), new Color('#FB923C')),
-  sub: Color.dynamic(new Color('#5A6270'), new Color('#9AA3AF')),
-  card: Color.dynamic(new Color('#EEF2FF'), new Color('#1E2638')),
-}
-
 async function info(title, message) {
   const a = new Alert()
   a.title = title
@@ -110,6 +150,7 @@ async function screen(build) {
 // ---------- ホーム ----------
 
 async function home(ctx) {
+  useTheme(ctx)
   const { core, data } = ctx
   await screen((t, render) => {
     const now = new Date()
@@ -192,6 +233,7 @@ async function home(ctx) {
 
 // 明日やること（F-18）：3つまで
 async function tasks(ctx, day) {
+  useTheme(ctx)
   const { core, data } = ctx
   await screen((t, render) => {
     const items = core.tasksFor(data, day)
@@ -222,6 +264,7 @@ async function toggleSkip(ctx, target) {
   if (i >= 0) {
     data.state.skipDates.splice(i, 1)
     if (data.state.plan && data.state.plan.date === key) data.state.plan = null
+    if (data.state.pendingOff === key) data.state.pendingOff = null
     core.saveState(data)
     await notify.rescheduleBedtime(core, data, new Date())
     const go = await confirm(label + 'のお休みを取り消しました', 'アラームを鳴らすには、ショートカット「' + data.config.shortcutPlan + '」を実行してください。今すぐ開きますか？', '開く')
@@ -233,9 +276,12 @@ async function toggleSkip(ctx, target) {
     core.saveState(data)
     await notify.rescheduleBedtime(core, data, new Date())
     if (armed) {
-      // すでにアラームをオンにしてある：ショートカット「アラーム準備」はオンにする専用なので、時計アプリで手でオフにしてもらう
-      const labels = data.config.stages.map(s => s.clockLabel).join('・')
-      await info(label + 'をお休みにしました', 'アラームはもうオンになっています。時計アプリで「' + labels + '」をオフにしてください')
+      // すでにアラームをオンにしてある：ショートカット「起床チェックイン」（アラームをオフにする）を流用する。
+      // 「オフにしてよい」印を残しておくと、チェックインの時間外でもアラームをオフにして止まらずに終わる
+      data.state.pendingOff = key
+      core.saveState(data)
+      await info(label + 'をお休みにしました', 'アラームがもうオンになっているので、このあと「起床チェックイン」が開いてアラームをオフにします')
+      openShortcut(core, '起床チェックイン')
     } else {
       await info(label + 'をお休みにしました', '今夜のアラーム準備でアラームはオンになりません')
     }
@@ -245,6 +291,7 @@ async function toggleSkip(ctx, target) {
 // ---------- ルーティン（F-09, F-11） ----------
 
 async function routine(ctx) {
+  useTheme(ctx)
   const { core, data } = ctx
   await screen((t, render) => {
     const now = new Date()
@@ -281,6 +328,7 @@ async function routine(ctx) {
 // ---------- 持ち物（F-10） ----------
 
 async function belongings(ctx) {
+  useTheme(ctx)
   const { core, data } = ctx
   await screen((t, render) => {
     const key = core.dateKey(new Date())
@@ -305,9 +353,59 @@ async function belongings(ctx) {
   })
 }
 
-// ---------- 記録（F-12） ----------
+// 週ごとの平均点の棒グラフ（0〜100点）。記録のない週は点線の枠だけ
+function weekChart(weeks) {
+  const W = 340
+  const H = 180
+  const top = 22
+  const bottom = 28
+  const left = 30
+  const c = new DrawContext()
+  c.size = new Size(W, H)
+  c.opaque = false
+  c.respectScreenScale = true
+  const plotH = H - top - bottom
+  const y = v => top + plotH * (1 - v / 100)
+  c.setFont(fnt(10, false))
+  c.setTextColor(C.sub)
+  for (const v of [0, 50, 100]) {
+    const p = new Path()
+    p.move(new Point(left, y(v)))
+    p.addLine(new Point(W - 4, y(v)))
+    c.addPath(p)
+    c.setStrokeColor(new Color(S.muted, v === 0 ? 0.6 : 0.2))
+    c.setLineWidth(v === 0 ? 1 : 0.5)
+    c.strokePath()
+    c.setTextAlignedRight()
+    c.drawTextInRect(String(v), new Rect(0, y(v) - 7, left - 6, 14))
+  }
+  const slot = (W - 4 - left) / weeks.length
+  const bw = Math.min(26, slot * 0.6)
+  weeks.forEach((w, i) => {
+    const x = left + slot * i + (slot - bw) / 2
+    if (w.avg !== null) {
+      c.setFillColor(new Color(S.accent, i === weeks.length - 1 ? 1 : 0.55))
+      const h = Math.max(2, plotH * w.avg / 100)
+      const p = new Path()
+      p.addRoundedRect(new Rect(x, y(w.avg), bw, h), 4, 4)
+      c.addPath(p)
+      c.fillPath()
+      c.setTextColor(C.ink)
+      c.setTextAlignedCenter()
+      c.setFont(fnt(10, i === weeks.length - 1))
+      c.drawTextInRect(String(w.avg), new Rect(x - 8, y(w.avg) - 15, bw + 16, 13))
+    }
+    c.setFont(fnt(9, false))
+    c.setTextColor(C.sub)
+    c.setTextAlignedCenter()
+    c.drawTextInRect(w.label, new Rect(left + slot * i, H - bottom + 6, slot, 12))
+  })
+  return c.getImage()
+}
 
+// ---------- 記録（F-12） ----------
 async function records(ctx) {
+  useTheme(ctx)
   const { core, data } = ctx
   await screen(t => {
     const now = new Date()
@@ -321,14 +419,13 @@ async function records(ctx) {
       big: 22, height: 80, bg: C.card,
     })
     // 週ごとの推移（直近8週）
-    row(t, '週ごとの平均', null, { header: true })
-    for (let i = 0; i < 8; i++) {
+    row(t, '週ごとの平均（直近8週）', null, { header: true })
+    const weeks = []
+    for (let i = 7; i >= 0; i--) {
       const end = core.addDays(now, -7 * i)
-      const list = core.recentSessions(data, end, 7)
-      const a = core.average(list)
-      const bar = a === null ? '' : '■'.repeat(Math.round(a / 10)) + '□'.repeat(10 - Math.round(a / 10))
-      row(t, core.fmtDate(core.addDays(end, -6)) + '〜　' + (a === null ? '記録なし' : a + '点'), bar || null, { height: bar ? 50 : 40, subSize: 12 })
+      weeks.push({ label: (core.addDays(end, -6).getMonth() + 1) + '/' + core.addDays(end, -6).getDate(), avg: core.average(core.recentSessions(data, end, 7)) })
     }
+    imageRow(t, weekChart(weeks), 190)
     row(t, '毎日の記録', null, { header: true })
     const list = data.sessions.slice(-60).reverse()
     if (!list.length) row(t, 'まだ記録がありません', null, { color: C.sub })
@@ -343,10 +440,12 @@ async function records(ctx) {
 // ---------- 設定 ----------
 
 async function settings(ctx) {
+  useTheme(ctx)
   const { core, notify, data } = ctx
   const save = async () => {
     data.config = core.normalizeConfig(data.config)
     core.saveConfig(data)
+    useTheme(ctx)
     data.problems = data.problems.filter(p => p.indexOf('config.json') < 0)
     await notify.rescheduleBedtime(core, data, new Date())
   }
@@ -530,6 +629,7 @@ async function settings(ctx) {
 // ---------- 動作確認 ----------
 
 async function diagnose(ctx) {
+  useTheme(ctx)
   const { core, data } = ctx
   const now = new Date()
   const ph = core.phaseAt(data, now)
@@ -549,4 +649,4 @@ async function diagnose(ctx) {
   })
 }
 
-module.exports = { home, routine, belongings, records, settings, diagnose, info, tasks, toggleSkip }
+module.exports = { home, routine, belongings, records, settings, diagnose, info, tasks, toggleSkip, weekChart, useTheme }

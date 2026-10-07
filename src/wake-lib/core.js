@@ -246,7 +246,7 @@ async function loadAll() {
   if ((c.value === null && !c.broken && !c.unreadable) || old) {
     try { writeJSON('config.json', config) } catch (e) { /* 書けなくても動作は続ける */ }
   }
-  const state = Object.assign({ plan: null, skipDates: [], routine: null, belongings: null, weeklySent: null, tasks: null, weather: null }, s.value || {})
+  const state = Object.assign({ plan: null, skipDates: [], routine: null, belongings: null, weeklySent: null, tasks: null, weather: null, pendingOff: null }, s.value || {})
   if (!Array.isArray(state.skipDates)) state.skipDates = []
   const sessions = h.value && Array.isArray(h.value.sessions) ? h.value.sessions : []
   return {
