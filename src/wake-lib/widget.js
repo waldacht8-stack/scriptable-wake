@@ -31,6 +31,19 @@ function hstack(parent) {
   return s
 }
 
+// iPhone 標準のアイコン（SF Symbols）付きの1行。ロック画面は単色なので、絵文字より形がはっきり出る。
+// アイコンが見つからない iOS では文字だけにする
+function iconLine(parent, symbol, size) {
+  const s = hstack(parent)
+  s.spacing = 4
+  const sym = SFSymbol.named(symbol)
+  if (sym) {
+    const img = s.addImage(sym.image)
+    img.imageSize = new Size(size, size)
+  }
+  return s
+}
+
 // 円形用：中央寄せの1行
 function centered(parent, value, size, regular) {
   const s = hstack(parent)
@@ -90,7 +103,7 @@ function waking(core, data, now, family, w) {
     w.addSpacer()
     return
   }
-  text(w, '⏰ 段階' + (cur.index + 1) + '・' + cur.name, 15)
+  text(iconLine(w, 'alarm.fill', 15), '段階' + (cur.index + 1) + '・' + cur.name, 15)
   text(w, next ? '次 ' + core.shortTime(next.time) + ' 段階' + (next.index + 1) : 'これが最終段階', 13, { regular: true })
   text(w, 'タップでチェックイン', 13)
 }
@@ -116,8 +129,8 @@ function morning(core, data, now, family, w) {
     w.addSpacer()
     return
   }
-  const l1 = hstack(w)
-  text(l1, '🚪 出発まで ', 13, { regular: true })
+  const l1 = iconLine(w, 'door.left.hand.open', 13)
+  text(l1, '出発まで ', 13, { regular: true })
   timer(l1, dep, 16)
   if (st.complete) text(w, '✓ 出発準備OK', 14)
   else text(w, '次：' + st.current.name + '（' + st.current.minutes + '分）', 14)
@@ -163,8 +176,8 @@ function night(core, data, now, family, w, todos, ph) {
     w.addSpacer()
     return
   }
-  const l1 = hstack(w)
-  text(l1, '🌙 就寝まで ', 13, { regular: true })
+  const l1 = iconLine(w, 'moon.zzz.fill', 13)
+  text(l1, '就寝まで ', 13, { regular: true })
   timer(l1, bed, 16)
   const tomorrow = core.wakeDayAfter(now)
   const label = relDay(core, tomorrow, now)
@@ -193,7 +206,7 @@ function presleep(core, data, now, family, w) {
   const wakeAt = soon ? core.at(nw.day, core.wakeTime(cfg)) : null
   const head = soon ? '⏰ ' + relDay(core, nw.day, now) + ' ' + core.fmtTime(wakeAt) + ' 起床' : '⏰ ' + relDay(core, target, now) + 'はアラームなし'
   if (family === 'accessoryInline') return text(w, head, 13)
-  text(w, head, 15)
+  text(iconLine(w, 'alarm', 15), head.replace('⏰ ', ''), 15)
   if (soon) {
     text(w, 'アラーム' + cfg.stages.length + 'つ（' + core.shortTime(cfg.stages[cfg.stages.length - 1].time) + 'まで）', 13, { regular: true })
     text(w, '今寝ると ' + core.fmtDuration(nw.start - now), 13, { regular: true })
