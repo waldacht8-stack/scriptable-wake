@@ -159,7 +159,8 @@ async function runApp() {
   await ui.home(ctx)
 }
 
-const param = args.shortcutParameter
+// Run Script の「Parameter」に入れた値。「Texts」の欄に入れた場合も受け取る
+const param = args.shortcutParameter || (args.plainTexts && args.plainTexts.length ? args.plainTexts[0] : null)
 if (config.runsInWidget) {
   // 誤ってこのスクリプトをウィジェットに選んだとき
   const w = new ListWidget()
