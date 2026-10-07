@@ -130,7 +130,7 @@ body{background:var(--paper);color:var(--ink);font-family:"Hiragino Mincho ProN"
 .sky{position:relative;height:46vh;min-height:300px;overflow:hidden;flex:none}
 .band{position:absolute;left:0;right:0;transition:background .8s}
 .b1{top:0;height:34%;background:var(--s1)}.b2{top:34%;height:22%;background:var(--s2)}.b3{top:56%;height:22%;background:var(--s3)}.b4{top:78%;height:22%;background:var(--s4)}
-.sun{position:absolute;left:50%;width:120px;height:120px;margin-left:-60px;border-radius:50%;background:var(--sun);transition:top 1.6s cubic-bezier(.2,.7,.2,1),background .8s}
+.sun{position:absolute;left:50%;width:120px;height:120px;margin-left:-60px;border-radius:50%;background:var(--sun);transition:top 2.2s cubic-bezier(.2,.7,.2,1),background .8s}
 .moon{position:absolute;right:14%;top:58%;width:54px;height:54px;border-radius:50%;box-shadow:-14px 8px 0 0 var(--sun);transform:rotate(-20deg);opacity:0;transition:opacity .8s}
 body.night .moon,body.presleep .moon{opacity:1}body.night .sun,body.presleep .sun{opacity:0}
 .star{position:absolute;width:3px;height:3px;border-radius:50%;background:var(--sun);opacity:0;transition:opacity .8s}
@@ -202,7 +202,7 @@ document.getElementById('label').textContent=m.label;
 document.getElementById('big').textContent=m.big;
 document.getElementById('sub').textContent=m.sub;
 var sky=document.querySelector('.sky').clientHeight;var p=Math.max(0,Math.min(1,m.sun));
-document.getElementById('sun').style.top=((sky-30)-p*((sky-30)-sky*0.5))+'px';
+var sunEl=document.getElementById('sun'),target=((sky-30)-p*((sky-30)-sky*0.5))+'px';if(!window.__risen){window.__risen=true;sunEl.style.top=(sky+10)+'px';setTimeout(function(){sunEl.style.top=target},80)}else sunEl.style.top=target;
 document.getElementById('steps').innerHTML=m.steps.map(function(s){return '<span class="'+s.state+'"><i></i>'+esc(s.name)+'</span>'}).join('');
 document.getElementById('steps').style.display=m.steps.length?'':'none';
 document.getElementById('lines').innerHTML=m.lines.map(function(l){return '<div>'+esc(l)+'</div>'}).join('');
