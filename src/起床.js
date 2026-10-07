@@ -30,18 +30,20 @@ async function runApp() {
   if (!(await housekeeping(data, now))) data.problems.push('通知を予約できません（設定 > Scriptable で通知を許可してください）')
   const q = args.queryParameters || {}
   const ctx = { core, notify, data }
-  // ウィジェットのタップ（朝）：今のルーティン項目を完了にしてから開く
+  // ウィジェットのタップ（朝）：今のルーティン項目を完了にしてから開く（太陽が1つ昇った画面になる）
   if (q.action === 'next') {
     const st = core.routineStatus(data, now)
     if (!st.complete) {
       core.advanceRoutine(data, now, 1)
       core.saveState(data)
     }
-    return await ui.routine(ctx)
   }
+  // 通知などから特定の画面を指定されたときは、その画面（表の画面）を開く
   const view = { routine: ui.routine, belongings: ui.belongings, records: ui.records, settings: ui.settings }[q.view]
   if (view) return await view(ctx)
-  await ui.home(ctx)
+  // ホーム画面：デザイン「朝焼けの地平」
+  const home = importModule('wake-lib/dawn-home')(core, importModule('wake-lib/dawn'), ui, notify)
+  await home.present(ctx)
 }
 
 // Run Script の「Parameter」に入れた値。「Texts」の欄に入れた場合も受け取る

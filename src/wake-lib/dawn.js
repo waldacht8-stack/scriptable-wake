@@ -2,16 +2,54 @@
 // デザイン案D「朝焼けの地平」の共通部品：明朝体、漢数字、地平線と太陽・月の絵。
 // ロック画面は単色（明るさだけ）で表示されるので、絵は白と透明度だけで描く。
 
-const MINCHO = 'HiraMinProN-W6'
-const MINCHO_LIGHT = 'HiraMinProN-W3'
+// ---------- デザイン（設定で切り替える） ----------
+// 書体は iPhone に最初から入っているヒラギノ（明朝・丸ゴシック・角ゴシック）だけを使う
+const THEMES = {
+  dawn: {
+    name: '朝焼けの地平', note: '明朝体・空と太陽', fonts: ['HiraMinProN-W6', 'HiraMinProN-W3'], kanji: true, track: false,
+    words: { depart: '出発まで', late: '遅れそう', next: n => n + 'をすませた', done: '支度ができました', bed: '眠るまで', wake: '夜が明けました', tap: 'タップで起きる', today: '今日のこと' },
+  },
+  kissa: {
+    name: '喫茶モーニング', note: '丸ゴシック・まったり', fonts: ['HiraMaruProN-W4', 'HiraMaruProN-W4'], kanji: true, track: false,
+    words: { depart: 'お会計まで', late: '遅れそう', next: n => n + '、おわり', done: 'ごちそうさまでした', bed: 'おやすみまで', wake: 'おはようございます', tap: 'タップで起きる', today: '本日のおしながき' },
+  },
+  station: {
+    name: '駅の発車標', note: '黒地に琥珀色・停車駅', fonts: ['HiraginoSans-W6', 'HiraginoSans-W3'], kanji: false, track: true,
+    words: { depart: '発車まで', late: '遅れ見込み', next: n => n + 'を通過', done: 'まもなく発車', bed: '終電まで', wake: '始発の時間です', tap: 'タップで乗車', today: '本日の運行' },
+  },
+  sora: {
+    name: '青空シンプル', note: 'ゴシック・明るい空色', fonts: ['HiraginoSans-W6', 'HiraginoSans-W3'], kanji: false, track: false,
+    words: { depart: '出発まで', late: '遅れそう', next: n => n + ' 完了', done: '準備OK', bed: '就寝まで', wake: '起きる時間です', tap: 'タップでチェックイン', today: '今日のこと' },
+  },
+}
 
-// 明朝体（iPhone 標準のヒラギノ明朝）。使えなければ標準の文字
-function font(size, light) {
+function theme(name) {
+  return THEMES[name] || THEMES.dawn
+}
+
+// デザインの書体。使えなければ標準の文字
+function font(size, light, themeName) {
+  const f = theme(themeName).fonts
   try {
-    return new Font(light ? MINCHO_LIGHT : MINCHO, size)
+    return new Font(light ? f[1] : f[0], size)
   } catch (e) {
     return light ? Font.systemFont(size) : Font.boldSystemFont(size)
   }
+}
+
+// デザインに合わせた数字（明朝・丸ゴシックは漢数字、ほかは算用数字）
+function num(themeName, n) {
+  return theme(themeName).kanji ? kanji(n) : String(Math.round(n))
+}
+
+function minutesText(themeName, min) {
+  if (theme(themeName).kanji) return kanjiMinutes(min)
+  const m = Math.max(0, Math.round(min))
+  return m < 60 ? m + '分' : Math.floor(m / 60) + '時間' + (m % 60 ? (m % 60) + '分' : '')
+}
+
+function timeText(themeName, d) {
+  return theme(themeName).kanji ? kanjiTime(d) : d.getHours() + ':' + String(d.getMinutes()).padStart(2, '0')
 }
 
 // ---------- 漢数字 ----------
@@ -188,4 +226,27 @@ function rise(w, h, kind, p) {
   return c.getImage()
 }
 
-module.exports = { font, kanji, kanjiTime, kanjiMinutes, horizon, rise }
+// 駅の発車標デザイン用：停車駅（stops 個）の並んだ線路と、今いる位置の電車（p＝0〜1）
+function track(w, h, stops, p) {
+  const c = ctxOf(w, h)
+  const y = h / 2 + 2
+  const q = Math.max(0, Math.min(1, p || 0))
+  const n = Math.max(2, stops)
+  const x0 = 5
+  const x1 = w - 5
+  const x = x0 + q * (x1 - x0)
+  line(c, x0, y, x, y, 2.4, 0.95)
+  dashed(c, x, x1, y, 1.4, 0.55)
+  for (let i = 0; i < n; i++) {
+    const sx = x0 + (x1 - x0) * i / (n - 1)
+    const passed = sx <= x + 0.5
+    const pts = []
+    for (let k = 0; k <= 20; k++) pts.push(new Point(sx + 3.2 * Math.cos(Math.PI * 2 * k / 20), y + 3.2 * Math.sin(Math.PI * 2 * k / 20)))
+    fillPolygon(c, pts, passed ? 1 : 0.35)
+  }
+  // 電車（今いる位置の上の小さな三角）
+  fillPolygon(c, [new Point(x - 4, y - 9), new Point(x + 4, y - 9), new Point(x, y - 4)], 1)
+  return c.getImage()
+}
+
+module.exports = { THEMES, theme, font, num, minutesText, timeText, kanji, kanjiTime, kanjiMinutes, horizon, rise, track }

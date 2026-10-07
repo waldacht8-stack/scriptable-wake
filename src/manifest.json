@@ -5,18 +5,19 @@
     { "src": "起床 Update.js", "dest": "起床 Update.js" },
     { "src": "起床 準備.js", "dest": "起床 準備.js" },
     { "src": "起床 チェックイン.js", "dest": "起床 チェックイン.js" },
-    { "src": "起床 NFC.js", "dest": "起床 NFC.js" },
-    { "src": "起床 夜明け.js", "dest": "起床 夜明け.js" },
-    { "src": "起床ウィジェット 夜明け.js", "dest": "起床ウィジェット 夜明け.js" },
     { "src": "wake-lib/actions.js", "dest": "wake-lib/actions.js" },
     { "src": "wake-lib/weather.js", "dest": "wake-lib/weather.js" },
     { "src": "wake-lib/core.js", "dest": "wake-lib/core.js" },
     { "src": "wake-lib/notify.js", "dest": "wake-lib/notify.js" },
-    { "src": "wake-lib/widget.js", "dest": "wake-lib/widget.js" },
     { "src": "wake-lib/ui.js", "dest": "wake-lib/ui.js" },
     { "src": "wake-lib/dawn.js", "dest": "wake-lib/dawn.js" },
     { "src": "wake-lib/dawn-widget.js", "dest": "wake-lib/dawn-widget.js" },
     { "src": "wake-lib/dawn-home.js", "dest": "wake-lib/dawn-home.js" }
   ],
-  "remove": []
+  "remove": [
+    "起床 夜明け.js",
+    "起床ウィジェット 夜明け.js",
+    "起床 NFC.js",
+    "wake-lib/widget.js"
+  ]
 }

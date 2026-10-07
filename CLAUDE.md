@@ -13,8 +13,10 @@
   - 公開リポジトリなので、個人データ（チェックインのコードなど）をコミットしない
 - 本アプリのファイル構成（既存 Todo アプリと同じ形）
   - `src/起床.js`：メイン（画面・ショートカットからの呼び出し口）
-  - `src/起床 準備.js`・`src/起床 チェックイン.js`・`src/起床 NFC.js`：ショートカット専用の入口。利用者がショートカットに文字を入力できないため、Parameter の文字入力なしで使えるようにしてある。ショートカットは if文を使わず「Run Script → アラーム切り替え ×4」と並べるだけ。切り替えてはいけないときはスクリプトがわざと例外を投げてショートカットを止める（エラー文が利用者への知らせになる）。処理本体は `wake-lib/actions.js`
-  - `src/起床ウィジェット.js`：ロック画面ウィジェット
+  - `src/起床 準備.js`・`src/起床 チェックイン.js`：ショートカット専用の入口。利用者がショートカットに文字を入力できないため、Parameter の文字入力なしで使えるようにしてある。ショートカットは if文を使わず「Run Script → アラーム切り替え ×4」と並べるだけ。切り替えてはいけないときはスクリプトがわざと例外を投げてショートカットを止める（エラー文が利用者への知らせになる）。処理本体は `wake-lib/actions.js`
+  - `src/起床ウィジェット.js`：ロック画面ウィジェット。描画は `wake-lib/dawn-widget.js`（デザイン「朝焼けの地平」、絵は `wake-lib/dawn.js`）
+  - ホーム画面は `wake-lib/dawn-home.js`（WebView。ボタンは evaluateJavaScript の completion で受け取る）。設定などは `wake-lib/ui.js`（UITable）
+  - 配信をやめたファイルは `src/manifest.json` の `remove` に書くと「起床 Update」が iPhone から消す
   - `src/wake-lib/*.js`：共通モジュール（`importModule('wake-lib/xxx')` で読む）
   - データ：iCloud の Scriptable フォルダ内 `WakeApp/`（要件書 7 章）
 

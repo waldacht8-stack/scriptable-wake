@@ -464,6 +464,18 @@ async function settings(ctx) {
       onSelect: edit(async () => { const v = await askNumber('出発の何分前に通知するか', cfg.belongingsMinutes); if (v === null) return false; cfg.belongingsMinutes = Math.min(120, v) }),
     })
 
+    row(t, 'デザイン', null, { header: true })
+    const THEMES = [['dawn', '朝焼けの地平', '明朝体・空と太陽'], ['kissa', '喫茶モーニング', '丸ゴシック・まったり'], ['station', '駅の発車標', '黒地に琥珀色・停車駅'], ['sora', '青空シンプル', 'ゴシック・明るい空色']]
+    const cur = THEMES.find(x => x[0] === cfg.theme) || THEMES[0]
+    row(t, 'デザイン　' + cur[1], 'ホーム画面とロック画面の見た目（' + cur[2] + '）', {
+      height: 56,
+      onSelect: edit(async () => {
+        const i = await choose('デザイン', THEMES.map(x => (x[0] === cfg.theme ? '✓ ' : '') + x[1] + '（' + x[2] + '）'))
+        if (i < 0) return false
+        cfg.theme = THEMES[i][0]
+      }),
+    })
+
     row(t, '寝坊した朝', null, { header: true })
     row(t, '自分ルール', cfg.ownRule || '未設定（最終段階まで寝た朝に表示します）', {
       height: 56, onSelect: edit(async () => { const v = await askText('自分ルール', '最終段階まで寝てしまった朝に表示します。空にすると表示しません', cfg.ownRule, '例：今夜は23時にスマホを置く'); if (v === null) return false; cfg.ownRule = v }),
