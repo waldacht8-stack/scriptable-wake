@@ -42,10 +42,12 @@ module.exports = function (core, dawn, ui, notify, settings) {
       const last = core.at(now, cfg.stages[cfg.stages.length - 1].time)
       m.label = W.wake
       m.big = 'おはよう'
-      m.sub = '段階' + N(idx + 1) + 'が鳴っています'
+      // 最後のアラームから5分以上たったら「鳴っています」ではなく、経過時間を出す
+      const after = now - last > 5 * 60000
+      m.sub = after ? '最後のアラームから' + dawn.minutesText(T, (now - last) / 60000) : '段階' + N(idx + 1) + 'が鳴っています'
       m.sun = 0.08 + 0.12 * clamp((now - first) / Math.max(60000, last - first))
-      m.steps = cfg.stages.map(s => ({ name: core.shortTime(s.time), state: s.index < idx ? 'done' : s.index === idx ? 'now' : 'todo' }))
-      m.lines.push('起きたら下のボタンを押すと、残りのアラームが止まります')
+      m.steps = cfg.stages.map(s => ({ name: core.shortTime(s.time), state: after || s.index < idx ? 'done' : s.index === idx ? 'now' : 'todo' }))
+      m.lines.push(after ? 'まだチェックインしていません。' + core.shortTime(cfg.noon) + 'を過ぎると0点になります' : '起きたら下のボタンを押すと、残りのアラームが止まります')
       m.primary = ['checkin', '起きた']
     } else if (ph.phase === 'morning') {
       const st = core.routineStatus(data, now)

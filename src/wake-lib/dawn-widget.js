@@ -103,9 +103,11 @@ module.exports = function (core, dawn) {
     const last = core.at(now, cfg.stages[cfg.stages.length - 1].time)
     const p = clamp((now - first) / Math.max(60000, last - first))
     const next = cfg.stages[idx + 1]
-    if (f === 'accessoryInline') return text(w, W().wake + ' ・ ' + W().tap, 13, { system: true })
-    if (f === 'accessoryCircular') return circle(w, 'sun', 0.05 + 0.25 * p, s => text(s, '段階' + N(idx + 1), 11, { center: true }))
-    headline(w, W().wake, '段階' + N(idx + 1))
+    // 最後のアラームから5分以上たっても未チェックインなら、そのことを出す
+    const after = now - last > 5 * 60000
+    if (f === 'accessoryInline') return text(w, (after ? '未チェックイン' : W().wake) + ' ・ ' + W().tap, 13, { system: true })
+    if (f === 'accessoryCircular') return circle(w, 'sun', 0.05 + 0.25 * p, s => text(s, after ? '起きた？' : '段階' + N(idx + 1), 11, { center: true }))
+    headline(w, after ? '未チェックイン' : W().wake, after ? core.shortTime(data.config.noon) + 'まで' : '段階' + N(idx + 1))
     horizonRow(w, 'dawn', p)
     text(w, next ? W().tap + ' ・ 次 ' + core.shortTime(next.time) : W().tap, 14)
   }
