@@ -668,4 +668,4 @@ function readDebugLog(core, n) {
   }
 }
 
-module.exports = { home, routine, belongings, records, settings, diagnose, info, tasks, toggleSkip, weekChart, useTheme }
+module.exports = { home, routine, belongings, records, settings, diagnose, info, tasks, toggleSkip, weekChart, useTheme, askText, askTime, askNumber, choose, confirm, readDebugLog }

@@ -68,7 +68,9 @@ async function runApp(core, notify, actions) {
   if (view) return await view(ctx)
   // ホーム画面：デザイン「朝焼けの地平」。開けなかったときは、以前の表のホーム画面で開く
   try {
-    const home = importModule('wake-lib/dawn-home')(core, importModule('wake-lib/dawn'), ui, notify)
+    const dawn = importModule('wake-lib/dawn')
+    const settings = importModule('wake-lib/settings')(core, ui, notify, dawn)
+    const home = importModule('wake-lib/dawn-home')(core, dawn, ui, notify, settings)
     await home.present(ctx)
     step('ホーム画面を閉じた')
   } catch (e) {

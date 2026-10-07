@@ -5,7 +5,7 @@
 //   （太陽がふわっと昇るアニメーションを見せるため）。
 //   設定・記録などの画面は、これまでの表（UITable）の画面をそのまま上に重ねて開く。
 
-module.exports = function (core, dawn, ui, notify) {
+module.exports = function (core, dawn, ui, notify, settings) {
 
   const clamp = x => Math.max(0, Math.min(1, x))
   const rel = (day, now) => {
@@ -31,7 +31,7 @@ module.exports = function (core, dawn, ui, notify) {
       label: '', big: '', sub: '',
       sun: 0, deadline: null,
       steps: [], lines: [], primary: null, secondary: [],
-      menu: [['panel:routine', 'ルーティン'], ['panel:belongings', '持ち物'], ['panel:records', '記録'], ['design', 'デザイン'], ['settings', '設定']],
+      menu: [['panel:routine', 'ルーティン'], ['panel:belongings', '持ち物'], ['panel:records', '記録'], ['design', 'デザイン'], [settings ? 'panel:settings' : 'settings', '設定']],
     }
     const weather = optional(core.weatherFor, data, now)
     const today = optional(core.tasksFor, data, now) || []
@@ -138,6 +138,7 @@ module.exports = function (core, dawn, ui, notify) {
         score: s.score,
       })),
     }
+    m.settings = settings ? settings.model(data) : null
     return m
   }
 
@@ -203,6 +204,11 @@ button{font-family:inherit;border:0;cursor:pointer}
 .chart{width:100%;aspect-ratio:320/150;flex:none;margin:6px 0 4px}
 .day{display:flex;justify-content:space-between;font-size:15px;padding:8px 2px;border-bottom:1px solid color-mix(in srgb,var(--muted) 20%,transparent)}
 .day span:last-child{font-weight:700}
+.sh{font-size:13px;color:var(--muted);letter-spacing:.12em;margin:16px 2px 2px;font-weight:700}
+.sn{font-size:12px;color:var(--muted);margin:0 2px 4px}
+.srow{display:flex;align-items:center;justify-content:space-between;gap:12px;width:100%;min-height:52px;padding:8px 14px;border-radius:14px;background:color-mix(in srgb,var(--muted) 10%,transparent);color:var(--ink);font-size:16px;text-align:left}
+.srow .v{color:var(--muted);font-size:13px;text-align:right;min-width:0;overflow:hidden;text-overflow:ellipsis}
+.slog{font-size:11px;color:var(--muted);padding:2px 4px;word-break:break-all}
 /* ---- デザイン（設定で切り替え）。phase のクラスより後に書いて上書きする ---- */
 body.kissa{--warn:#B23A24;--s1:#5A3E2B;--s2:#86593D;--s3:#B98557;--s4:#E2BE8F;--sun:#FFF1D8;--skyInk:#FFF6E8;--paper:#EFE2CC;--ink:#3A2A1E;--muted:#7A6450;--btn:#3A2A1E;--btnInk:#FFF6E8;--line:#3A2A1E;--accent:#B23A24;--lateInk:#FFE0C2;font-family:"Hiragino Maru Gothic ProN","Zen Maru Gothic",sans-serif}
 body.kissa.day{--s1:#8C6A4F;--s2:#B08D6C;--s3:#D2B48F;--s4:#EBD5B5}
@@ -243,10 +249,11 @@ function btn(a,cls){return '<button type="button"'+(cls?' class="'+cls+'"':'')+'
 function dmin(min){var m=Math.max(0,Math.round(min));return m<60?m+'分':Math.floor(m/60)+'時間'+(m%60?(m%60)+'分':'')}
 function tick(){if(!M||!M.deadline)return;var x=(M.deadline-Date.now())/60000;document.getElementById('big').textContent=M.kanji?kmin(x):dmin(x)}
 var P=null;
+function drawSettings(){var h='';(M.settings||[]).forEach(function(s){h+='<div class="sh">'+esc(s.title)+'</div>'+(s.note?'<div class="sn">'+esc(s.note)+'</div>':'');s.rows.forEach(function(r){if(r.key)h+='<button type="button" class="srow" onclick="act(\\''+'set:'+r.key+'\\')"><span>'+esc(r.label)+'</span><span class="v">'+esc(r.value)+'</span></button>';else h+='<div class="slog">'+esc(r.label)+'</div>'})});return h}
 function openPanel(k){P=k;drawPanel();var p=document.getElementById('panel');p.classList.add('open');p.setAttribute('aria-hidden','false')}
 function closePanel(){P=null;var p=document.getElementById('panel');p.classList.remove('open');p.setAttribute('aria-hidden','true')}
 function chart(w){var W=320,H=150,t=18,b=24,l=26,ph=H-t-b,s=(W-l-4)/w.length,bw=Math.min(24,s*.6),o='<svg class="chart" viewBox="0 0 '+W+' '+H+'" role="img" aria-label="週ごとの平均点">';[0,50,100].forEach(function(v){var y=t+ph*(1-v/100);o+='<line x1="'+l+'" x2="'+(W-4)+'" y1="'+y+'" y2="'+y+'" stroke="var(--muted)" stroke-opacity="'+(v?.25:.6)+'" stroke-width="'+(v?.5:1)+'"/><text x="'+(l-6)+'" y="'+(y+4)+'" font-size="10" text-anchor="end" fill="var(--muted)">'+v+'</text>'});w.forEach(function(k,i){var x=l+s*i+(s-bw)/2,last=i===w.length-1;if(k.avg!==null){var y=t+ph*(1-k.avg/100);o+='<rect x="'+x+'" y="'+y+'" width="'+bw+'" height="'+Math.max(2,ph*k.avg/100)+'" rx="4" fill="var(--accent)" fill-opacity="'+(last?1:.5)+'"/><text x="'+(x+bw/2)+'" y="'+(y-4)+'" font-size="10" text-anchor="middle" fill="var(--ink)"'+(last?' font-weight="700"':'')+'>'+k.avg+'</text>'}o+='<text x="'+(l+s*i+s/2)+'" y="'+(H-6)+'" font-size="9" text-anchor="middle" fill="var(--muted)">'+k.label+'</text>'});return o+'</svg>'}
-function drawPanel(){if(!P||!M)return;var h='',T={routine:'朝のルーティン',belongings:'持ち物',records:'起床の記録'}[P];
+function drawPanel(){if(!P||!M)return;var h='',T={routine:'朝のルーティン',belongings:'持ち物',records:'起床の記録',settings:'設定'}[P];if(P==='settings')h=drawSettings();
 if(P==='routine'){var r=M.routine;h+='<p class="pnote">'+esc(r.head)+'</p>'+(r.late?'<p class="pnote late">'+esc(r.late)+'</p>':'');r.items.forEach(function(x,i){h+='<button type="button" class="item '+x.state+'" onclick="act(\\'routine:'+i+'\\')"><span class="mk">'+(x.state==='done'?'✓':'')+'</span><span class="nm">'+esc(x.name)+'</span><span class="mn">'+esc(x.min)+'</span></button>'});if(!r.items.length)h+='<p class="pnote">項目がありません（設定で追加）</p>'}
 if(P==='belongings'){var all=M.belongings.length&&M.belongings.every(function(x){return x.on});h+='<p class="pnote">'+(all?'全部そろいました':'タップして確かめる')+'</p>';M.belongings.forEach(function(x,i){h+='<button type="button" class="item'+(x.on?' on':'')+'" onclick="act(\\'belong:'+i+'\\')"><span class="mk">'+(x.on?'✓':'')+'</span><span class="nm">'+esc(x.name)+'</span></button>'})}
 if(P==='records'){var R=M.records;h+='<div class="stat"><div><span>今週の平均</span><b>'+(R.avg===null?'−':R.avg+'点')+'</b></div><div><span>連続記録</span><b>'+R.streak+'日</b></div></div>'+chart(R.weeks);if(!R.days.length)h+='<p class="pnote">まだ記録がありません</p>';R.days.forEach(function(d){h+='<div class="day"><span>'+esc(d.date)+'　'+esc(d.time)+'　'+esc(d.stage)+'</span><span>'+d.score+'点</span></div>'})}
@@ -321,6 +328,8 @@ setInterval(tick,20000);
     } else if (a === 'speak') {
       const mm = await model(data, now)
       if (mm.speech) await Speech.speak(mm.speech)
+    } else if (a.indexOf('set:') === 0 && settings) {
+      await settings.edit(ctx, a.slice(4))
     } else if (a === 'design') {
       await chooseTheme(data)
     } else if (a === 'skip' && typeof ui.toggleSkip === 'function') {

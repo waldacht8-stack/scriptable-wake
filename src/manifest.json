@@ -13,7 +13,8 @@
     { "src": "wake-lib/ui.js", "dest": "wake-lib/ui.js" },
     { "src": "wake-lib/dawn.js", "dest": "wake-lib/dawn.js" },
     { "src": "wake-lib/dawn-widget.js", "dest": "wake-lib/dawn-widget.js" },
-    { "src": "wake-lib/dawn-home.js", "dest": "wake-lib/dawn-home.js" }
+    { "src": "wake-lib/dawn-home.js", "dest": "wake-lib/dawn-home.js" },
+    { "src": "wake-lib/settings.js", "dest": "wake-lib/settings.js" }
   ],
   "remove": [
     "起床 夜明け.js",
