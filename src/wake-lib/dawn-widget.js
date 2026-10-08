@@ -1,5 +1,5 @@
 // wake-lib/dawn-widget.js
-// ロック画面ウィジェット。設定のデザイン（朝焼けの地平・喫茶モーニング・駅の発車標・青空シンプル）で描く。
+// ロック画面ウィジェット。設定のデザイン（朝・昼用と夜用）で描く。
 // 地平線の上を太陽が進み（駅の発車標は停車駅の線路）、デザインの書体と言い回しで知らせる。
 // 描画はファイルを読むだけ（通信・通知なし）。
 //   長方形：1行目＝見出しと時刻（または残り時間のタイマー）、2行目＝地平線の絵、3行目＝次のこと
@@ -55,12 +55,13 @@ module.exports = function (core, dawn) {
   }
 
   // 1行目：左に見出し、右に時刻やタイマー
+  // 見出しは小さく控えめに、右の値（時刻・タイマー）は大きく
   function headline(w, left, right) {
     const s = hstack(w)
-    text(s, left, 12, { light: true, opacity: 0.85 })
+    text(s, left, 11, { light: true, opacity: 0.75 })
     s.addSpacer()
-    if (right instanceof Date) timer(s, right, 15)
-    else if (right) text(s, right, 13)
+    if (right instanceof Date) timer(s, right, 17)
+    else if (right) text(s, right, 15)
     return s
   }
 
@@ -70,9 +71,9 @@ module.exports = function (core, dawn) {
     return i
   }
 
-  function horizonRow(w, kind, p, stops) {
+  function horizonRow(w, kind, p, stops, list) {
     w.addSpacer(3)
-    const img = stops && dawn.theme(T).track ? dawn.track(RECT_W, RECT_IMG_H, stops, p) : dawn.horizon(RECT_W, RECT_IMG_H, kind, p)
+    const img = stops && dawn.theme(T).track ? dawn.track(RECT_W, RECT_IMG_H, stops, p) : dawn.horizon(RECT_W, RECT_IMG_H, kind, p, list)
     picture(w, img, RECT_W, RECT_IMG_H)
     w.addSpacer(3)
   }
@@ -80,8 +81,8 @@ module.exports = function (core, dawn) {
   function circle(w, kind, p, under) {
     w.addAccessoryWidgetBackground = true
     w.addSpacer()
-    centered(w, s => picture(s, dawn.rise(46, 26, kind, p), 46, 26))
-    w.addSpacer(2)
+    centered(w, s => picture(s, dawn.rise(50, 28, kind, p), 50, 28))
+    w.addSpacer(1)
     centered(w, s => under(s))
     w.addSpacer()
   }
@@ -102,14 +103,16 @@ module.exports = function (core, dawn) {
     const first = core.at(now, cfg.stages[0].time)
     const last = core.at(now, cfg.stages[cfg.stages.length - 1].time)
     const p = clamp((now - first) / Math.max(60000, last - first))
-    const next = cfg.stages[idx + 1]
     // 最後のアラームから5分以上たっても未チェックインなら、そのことを出す
     const after = now - last > 5 * 60000
+    // 地平線の上の点＝それぞれのアラームの時刻（鳴ったものは塗る）
+    const span = Math.max(60000, last - first)
+    const list = cfg.stages.map(s => ({ at: (core.at(now, s.time) - first) / span, done: core.at(now, s.time) <= now }))
     if (f === 'accessoryInline') return text(w, (after ? '未チェックイン' : W().wake) + ' ・ ' + W().tap, 13, { system: true })
-    if (f === 'accessoryCircular') return circle(w, 'sun', 0.05 + 0.25 * p, s => text(s, after ? '起きた？' : '段階' + N(idx + 1), 11, { center: true }))
+    if (f === 'accessoryCircular') return circle(w, 'sun', 0.05 + 0.25 * p, s => text(s, after ? '起きた？' : '段階' + N(idx + 1), 12, { center: true }))
     headline(w, after ? '未チェックイン' : W().wake, after ? core.shortTime(data.config.noon) + 'まで' : '段階' + N(idx + 1))
-    horizonRow(w, 'dawn', p)
-    text(w, next ? W().tap + ' ・ 次 ' + core.shortTime(next.time) : W().tap, 14)
+    horizonRow(w, 'dawn', p, 0, list)
+    text(w, W().tap, 15, { minScale: 0.8 })
   }
 
   function morning(data, now, f, w) {
@@ -120,19 +123,24 @@ module.exports = function (core, dawn) {
     const p = clamp((now - from) / Math.max(60000, dep - from))
     const warn = st.lateMinutes ? N(st.lateMinutes) + '分' + W().late : ''
     if (f === 'accessoryInline') {
-      return text(w, core.fmtTime(dep) + ' 出発 ・ ' + (st.complete ? W().done : '次 ' + st.current.name) + (warn ? ' ・ ' + warn : ''), 13, { system: true })
+      return text(w, core.fmtTime(dep) + '発 ・ ' + (warn || (st.complete ? W().done : '次 ' + st.current.name)), 13, { system: true })
     }
-    if (f === 'accessoryCircular') return circle(w, 'sun', p, c => timer(c, dep, 12, true))
+    if (f === 'accessoryCircular') return circle(w, 'sun', p, c => timer(c, dep, 13, true))
+    // 地平線の上の点＝ルーティンの予定の区切り（起床からの所要時間を積み上げた位置）。済んだ項目は塗る。
+    // 太陽が点より先に進んでいれば、予定より遅れている
+    const span = Math.max(60000, dep - from)
+    let acc = 0
+    const list = data.config.routine.map((r, i) => { acc += r.minutes; return { at: acc * 60000 / span, done: i < st.done } })
     headline(w, warn ? '⚠ ' + warn : W().depart, dep)
-    horizonRow(w, 'sun', p, st.total + 1)
-    if (st.complete) text(w, W().done + ' ・ ' + dawn.timeText(T, dep) + '発', 14)
-    else text(w, '次 ' + st.current.name + ' ' + N(st.current.minutes) + '分', 14)
+    horizonRow(w, 'sun', p, st.total + 1, list)
+    if (st.complete) text(w, W().done + ' ・ ' + dawn.timeText(T, dep) + '発', 15, { minScale: 0.8 })
+    else text(w, '次 ' + st.current.name + '　' + N(st.current.minutes) + '分', 15, { minScale: 0.8 })
   }
 
   function day(data, now, f, w, todos) {
     if (f === 'accessoryCircular') {
       const s = core.sessionOf(data, now)
-      return circle(w, 'sun', 1, c => text(c, s ? s.score + '点' : '−', 12, { center: true }))
+      return circle(w, 'sun', 1, c => text(c, s ? s.score + '点' : '−', 13, { center: true }))
     }
     if (!todos.ok) return text(w, 'Todoを読み込めません', 13, { system: f === 'accessoryInline' })
     const items = todos.items
@@ -142,7 +150,7 @@ module.exports = function (core, dawn) {
     // 単色なので、期限切れは「！」で区別する
     for (const t of items.slice(0, 2)) {
       const due = core.fmtDue(t, now)
-      text(w, (core.isOverdue(t, now) ? '！' : '・') + t.title + (due ? '　' + due : ''), 14, { minScale: 0.75 })
+      text(w, (core.isOverdue(t, now) ? '！' : '・') + t.title + (due ? '　' + due : ''), 15, { minScale: 0.75 })
     }
   }
 
@@ -154,10 +162,10 @@ module.exports = function (core, dawn) {
     const wake = core.isWakeDay(data, tomorrow)
     const label = rel(tomorrow, now)
     if (f === 'accessoryInline') return text(w, core.shortTime(cfg.bedtime) + ' 就寝 ・ ' + (wake ? label + ' ' + core.shortTime(core.wakeTime(cfg)) + ' 起床' : label + 'はアラームなし'), 13, { system: true })
-    if (f === 'accessoryCircular') return circle(w, 'moon', 0, c => text(c, core.shortTime(cfg.bedtime), 12, { center: true }))
+    if (f === 'accessoryCircular') return circle(w, 'moon', 0, c => text(c, core.shortTime(cfg.bedtime), 13, { center: true }))
     headline(w, W().bed, bed)
     horizonRow(w, 'night', 0)
-    text(w, wake ? label + ' ' + dawn.timeText(T, core.at(tomorrow, core.wakeTime(cfg))) + 'に起床' : label + 'はアラームなし', 14)
+    text(w, wake ? label + ' ' + dawn.timeText(T, core.at(tomorrow, core.wakeTime(cfg))) + 'に起床' : label + 'はアラームなし', 15, { minScale: 0.8 })
   }
 
   function presleep(data, now, f, w) {
@@ -169,23 +177,24 @@ module.exports = function (core, dawn) {
     const sleepMin = soon ? (nw.start - now) / 60000 : 0
     if (f === 'accessoryInline') return text(w, soon ? label + ' ' + core.shortTime(core.wakeTime(cfg)) + ' 起床' : label + 'はアラームなし', 13, { system: true })
     if (f === 'accessoryCircular') {
-      return circle(w, 'moon', 0, c => text(c, soon ? Math.floor(sleepMin / 60) + '時間' : '休み', 11, { center: true }))
+      return circle(w, 'moon', 0, c => text(c, soon ? Math.floor(sleepMin / 60) + '時間' : '休み', 12, { center: true }))
     }
     headline(w, label + 'の朝', soon ? core.shortTime(core.wakeTime(cfg)) : 'アラームなし')
     horizonRow(w, 'stars', 0)
-    if (soon) text(w, '今眠ると ' + dawn.minutesText(T, sleepMin), 14)
-    else text(w, nw ? '次の起床 ' + core.fmtDate(nw.day) : 'ゆっくり眠れます', 14)
+    if (soon) text(w, '今眠ると ' + dawn.minutesText(T, sleepMin), 15, { minScale: 0.8 })
+    else text(w, nw ? '次の起床 ' + core.fmtDate(nw.day) : 'ゆっくり眠れます', 15)
   }
 
   // ---------- 組み立て ----------
 
   async function build(data, family, now, param) {
     const f = family || 'accessoryRectangular'
-    T = data.config.theme || 'dawn'
     const forced = FORCE[String(param || '').trim().toLowerCase()]
     const ph = core.phaseAt(data, now)
     let phase = forced || ph.phase
     if (phase === 'morning' && !core.dayConfig(data.config, now).departure) phase = 'day'
+    // 朝・昼と夜でデザインを変える
+    T = dawn.themeFor(data.config, phase)
 
     const w = new ListWidget()
     // 太陽が動いて見えるよう、朝と起床中はこまめに更新を頼む（実際の間隔は iOS が決める）

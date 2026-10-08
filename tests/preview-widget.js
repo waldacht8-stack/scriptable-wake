@@ -50,7 +50,7 @@ async function main() {
   core.loadTodos = async () => ({ ok: true, items: [{ title: '記念日ご飯予約', due: '2026-10-08T15:00:00.000Z', allDay: true, createdAt: '1' }, { title: 'claudecode max解約', due: '2026-10-31T15:00:00.000Z', allDay: true, createdAt: '2' }, { title: '牛乳を買う', due: null, createdAt: '3' }] })
   const RealDate = Date
   const at = (h, m, d) => { NOW = new RealDate(2026, 9, d || 8, h, m).getTime(); globalThis.Date = class extends RealDate { constructor(...a) { a.length ? super(...a) : super(NOW) } static now() { return NOW } } }
-  const mk = () => ({ config: core.normalizeConfig({ bedtime: '00:00', theme: THEME }), state: { plan: { date: '2026-10-08', wake: true, reason: '' }, skipDates: [], routine: { date: '2026-10-08', done: 2 } }, sessions: [], problems: [] })
+  const mk = () => ({ config: core.normalizeConfig({ bedtime: '00:00', theme: THEME, themeNight: THEME }), state: { plan: { date: '2026-10-08', wake: true, reason: '' }, skipDates: [], routine: { date: '2026-10-08', done: 2 } }, sessions: [], problems: [] })
   const cases = [
     ['起床中 7:13（段階2）', 7, 13, d => d],
     ['8:40 未チェックイン', 8, 40, d => d],

@@ -16,7 +16,13 @@ const C = {}
 
 // 画面を開くたびに、設定のデザインを読み直す
 function useTheme(ctx) {
-  const name = ctx && ctx.data && ctx.data.config ? ctx.data.config.theme : 'dawn'
+  let name = 'dawn'
+  try {
+    // 朝・昼と夜でデザインを変える（ホーム画面・ロック画面と同じ）
+    const cfg = ctx.data.config
+    const ph = ctx.core.phaseAt(ctx.data, new Date()).phase
+    name = (ph === 'night' || ph === 'presleep') ? (cfg.themeNight || cfg.theme) : cfg.theme
+  } catch (e) { /* 決められなければ標準 */ }
   S = STYLES[name] || STYLES.dawn
   C.accent = new Color(S.accent)
   C.warn = new Color(S.warn)

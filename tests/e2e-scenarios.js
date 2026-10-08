@@ -157,20 +157,26 @@ async function scenarios() {
   ok('設定: 週の振り返り 日曜20時', c.weeklyDay === 0 && c.weeklyTime === '20:00', [c.weeklyDay, c.weeklyTime])
   ok('設定: 受付90分・持ち物10分', c.checkinOpensMinutes === 90 && c.belongingsMinutes === 10)
   ok('設定: デザイン 駅の発車標', c.theme === 'station', c.theme)
-  ok('設定: 画面もデザインが変わる', r.lastModel && r.lastModel.theme === 'station')
+  ok('設定: 夜の時間帯は夜のデザイン（初期は喫茶モーニング）で表示', r.lastModel && r.lastModel.theme === 'kissa', r.lastModel && r.lastModel.theme)
 
   // ---- 10. デザインのメニュー ----
-  WV_ACTIONS = ['design']
-  ALERTS = [{ i: 3 }]
+  WV_ACTIONS = ['design', 'design', 'set:themeNight']
+  ALERTS = [{ i: 0 }, { i: 3 }, { i: 1 }, { i: 2 }, { i: 0 }]
   r = await run('起床.js', { app: true })
-  ok('デザイン: 青空シンプル', cfg().theme === 'sora', cfg().theme)
+  ok('デザイン: 朝・昼は青空シンプル', cfg().theme === 'sora', cfg().theme)
+  ok('デザイン: 夜は設定パネルで朝焼けの地平に', cfg().themeNight === 'dawn', cfg().themeNight)
+  ok('デザイン: 夜の時間帯は夜のデザインで表示', r.lastModel && r.lastModel.theme === 'dawn', r.lastModel && r.lastModel.theme)
+  setNow(2026, 10, 17, 9, 0)
+  WV_ACTIONS = []
+  r = await run('起床.js', { app: true })
+  ok('デザイン: 昼の時間帯は朝・昼のデザインで表示', (r.html || '').indexOf('"theme":"sora"') >= 0)
 
   // ---- 11. ウィジェット：4デザイン × 時間帯 × 3種類 ----
   setNow(2026, 10, 18, 20, 0) // 日曜夜：月曜は起床日
   await run('起床 準備.js')
   let widgetErrors = []
   for (const th of ['dawn', 'kissa', 'station', 'sora']) {
-    const cc = cfg(); cc.theme = th; FS[P('config.json')] = JSON.stringify(cc)
+    const cc = cfg(); cc.theme = th; cc.themeNight = th; FS[P('config.json')] = JSON.stringify(cc)
     for (const [d, h, m] of [[18, 23, 50], [19, 0, 30], [19, 6, 30], [19, 7, 5], [19, 7, 40], [19, 9, 0], [19, 19, 0], [19, 23, 50]]) {
       setNow(2026, 10, d, h, m)
       if (d === 19 && h === 7 && m === 40 && !sessions().find(s => s.date === '2026-10-19')) {

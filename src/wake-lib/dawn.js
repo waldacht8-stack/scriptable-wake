@@ -27,6 +27,13 @@ function theme(name) {
   return THEMES[name] || THEMES.dawn
 }
 
+// 時間帯に合わせたデザイン名：夜（夜・就寝前）は夜のデザイン、それ以外は朝・昼のデザイン
+function themeFor(cfg, phase) {
+  const night = phase === 'night' || phase === 'presleep'
+  const name = night ? (cfg.themeNight || cfg.theme) : cfg.theme
+  return THEMES[name] ? name : 'dawn'
+}
+
 // デザインの書体。使えなければ標準の文字
 function font(size, light, themeName) {
   const f = theme(themeName).fonts
@@ -170,30 +177,38 @@ function star(c, x, y, r, alpha) {
   fillPolygon(c, [new Point(x - r, y), new Point(x, y - r * 0.35), new Point(x + r, y), new Point(x, y + r * 0.35)], alpha)
 }
 
+// 地平線の上の目印（予定の区切り）。済んだものは塗り、これからのものは薄い輪
+function marks(c, list, x0, x1, base) {
+  for (const m of list || []) {
+    const x = x0 + Math.max(0, Math.min(1, m.at)) * (x1 - x0)
+    const pts = []
+    for (let k = 0; k <= 16; k++) pts.push(new Point(x + 2.2 * Math.cos(Math.PI * 2 * k / 16), base + 2.2 * Math.sin(Math.PI * 2 * k / 16)))
+    fillPolygon(c, pts, m.done ? 1 : 0.4)
+  }
+}
+
 // 長方形ウィジェット用の地平線（幅 w・高さ h）。
 //   kind 'sun'  ：半分の太陽が p（0〜1）の位置まで進む。通った道は実線、これからは点線
-//   kind 'dawn' ：太陽が地平線から少しだけ顔を出す（p＝顔の出かた 0〜1）
+//   kind 'dawn' ：太陽が地平線から少しだけ顔を出したまま、p の位置まで進む（起床中）
 //   kind 'night'：太陽は沈み、右上に三日月
 //   kind 'stars'：三日月と星（就寝前）
-function horizon(w, h, kind, p) {
+//   list：地平線の上の目印 [{ at: 0〜1, done }]（ルーティンの予定やアラームの時刻）
+function horizon(w, h, kind, p, list) {
   const c = ctxOf(w, h)
-  const base = h - 2
+  const base = h - 3
   const r = Math.min(h - 7, 9)
   const q = Math.max(0, Math.min(1, p || 0))
-  line(c, 0.5, base - 3, 0.5, base, 1, 0.8)
-  line(c, w - 0.5, base - 3, w - 0.5, base, 1, 0.8)
-  if (kind === 'sun') {
-    const x = r + 1 + q * (w - 2 * r - 2)
+  const x0 = r + 1
+  const x1 = w - r - 1
+  if (kind === 'sun' || kind === 'dawn') {
+    const x = x0 + q * (x1 - x0)
     line(c, 0, base, x, base, 1.6, 0.95)
     dashed(c, x, w, base, 1.2, 0.5)
-    sun(c, x, base, r, base)
-    rays(c, x, base, r, base, 5, 3)
-  } else if (kind === 'dawn') {
-    line(c, 0, base, w, base, 1.6, 0.95)
-    const x = r + 12
-    const cy = base + r * (0.5 - 0.45 * q)
+    marks(c, list, x0, x1, base)
+    // 起床中は顔を半分ほど出した低い太陽、朝は地平線に乗った太陽
+    const cy = kind === 'dawn' ? base + r * 0.45 : base
     sun(c, x, cy, r, base)
-    rays(c, x, cy, r, base, 3, 2.5)
+    rays(c, x, cy, r, base, kind === 'dawn' ? 3 : 5, kind === 'dawn' ? 2.5 : 3)
   } else {
     dashed(c, 0, w, base, 1.2, 0.55)
     moon(c, w - r - 4, r + 1, r * 0.8)
@@ -205,7 +220,6 @@ function horizon(w, h, kind, p) {
   }
   return c.getImage()
 }
-
 // 円形ウィジェット用：地平線から太陽が p（0〜1）だけ昇る。kind 'moon' なら三日月
 function rise(w, h, kind, p) {
   const c = ctxOf(w, h)
@@ -249,4 +263,4 @@ function track(w, h, stops, p) {
   return c.getImage()
 }
 
-module.exports = { THEMES, theme, font, num, minutesText, timeText, kanji, kanjiTime, kanjiMinutes, horizon, rise, track }
+module.exports = { THEMES, theme, themeFor, font, num, minutesText, timeText, kanji, kanjiTime, kanjiMinutes, horizon, rise, track }

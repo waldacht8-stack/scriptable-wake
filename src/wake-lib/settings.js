@@ -13,12 +13,16 @@ module.exports = function (core, ui, notify, dawn) {
 
   function model(data) {
     const cfg = data.config
-    const T = dawn.theme(cfg.theme)
     const sec = (title, note, rows) => ({ title, note, rows })
     const row = (label, value, key) => ({ label, value: value === undefined || value === null ? '' : String(value), key })
     const sections = []
     if (data.configBroken) sections.push(sec('⚠ 設定ファイルが壊れていました', '初期設定で動いています。変更すると保存し直します', []))
-    sections.push(sec('デザイン', 'ホーム画面とロック画面の見た目', [row(T.name, T.note, 'theme')]))
+    const TM = dawn.theme(cfg.theme)
+    const TN = dawn.theme(cfg.themeNight)
+    sections.push(sec('デザイン', 'ホーム画面とロック画面の見た目。夜（就寝の30分前まで）は夜のデザインになります', [
+      row('朝・昼　' + TM.name, TM.note, 'theme'),
+      row('夜　' + TN.name, TN.note, 'themeNight'),
+    ]))
     sections.push(sec('段階アラーム', '時計アプリのアラームも同じ時刻・ラベルにしてください',
       cfg.stages.map(s => row('段階' + (s.index + 1) + '　' + core.shortTime(s.time), s.name + '・' + s.score + '点・' + s.clockLabel, 'stage:' + s.index))
         .concat([row('＋ 段階を追加', '', 'stage:add')])))
@@ -67,11 +71,11 @@ module.exports = function (core, ui, notify, dawn) {
   // 変更したら true（保存する）、やめたら false
   async function change(cfg, key) {
     const [kind, arg] = key.split(':')
-    if (kind === 'theme') {
+    if (kind === 'theme' || kind === 'themeNight') {
       const keys = Object.keys(dawn.THEMES)
-      const i = await ui.choose('デザイン', keys.map(k => (cfg.theme === k ? '✓ ' : '') + dawn.THEMES[k].name + '（' + dawn.THEMES[k].note + '）'))
+      const i = await ui.choose(kind === 'theme' ? '朝・昼のデザイン' : '夜のデザイン', keys.map(k => (cfg[kind] === k ? '✓ ' : '') + dawn.THEMES[k].name + '（' + dawn.THEMES[k].note + '）'))
       if (i < 0) return false
-      cfg.theme = keys[i]
+      cfg[kind] = keys[i]
       return true
     }
     if (kind === 'stage') {

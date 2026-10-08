@@ -18,10 +18,11 @@ module.exports = function (core, dawn, ui, notify, settings) {
 
   async function model(data, now) {
     const cfg = data.config
-    const T = cfg.theme || 'dawn'
+    const ph = core.phaseAt(data, now)
+    // 朝・昼と夜でデザインを変える
+    const T = dawn.themeFor(cfg, ph.phase)
     const W = dawn.theme(T).words
     const N = n => dawn.num(T, n)
-    const ph = core.phaseAt(data, now)
     const session = core.sessionOf(data, now)
     const m = {
       phase: ph.phase,
@@ -290,14 +291,24 @@ setInterval(tick,20000);
   // デザインを選ぶ（ホーム画面とロック画面の両方が変わる）
   async function chooseTheme(data) {
     const keys = Object.keys(dawn.THEMES)
+    const cfg = data.config
+    const p = new Alert()
+    p.title = 'デザイン'
+    p.message = '朝・昼と夜で、別のデザインにできます'
+    p.addAction('朝・昼のデザイン（いま：' + dawn.theme(cfg.theme).name + '）')
+    p.addAction('夜のデザイン（いま：' + dawn.theme(cfg.themeNight).name + '）')
+    p.addCancelAction('キャンセル')
+    const which = await p.presentSheet()
+    if (which < 0) return
+    const key = which === 0 ? 'theme' : 'themeNight'
     const a = new Alert()
-    a.title = 'デザイン'
+    a.title = which === 0 ? '朝・昼のデザイン' : '夜のデザイン'
     a.message = 'ホーム画面とロック画面の見た目が変わります'
-    for (const k of keys) a.addAction((data.config.theme === k ? '✓ ' : '') + dawn.THEMES[k].name + '（' + dawn.THEMES[k].note + '）')
+    for (const k of keys) a.addAction((cfg[key] === k ? '✓ ' : '') + dawn.THEMES[k].name + '（' + dawn.THEMES[k].note + '）')
     a.addCancelAction('キャンセル')
     const i = await a.presentSheet()
     if (i < 0) return
-    data.config.theme = keys[i]
+    cfg[key] = keys[i]
     core.saveConfig(data)
   }
 

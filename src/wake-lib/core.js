@@ -44,7 +44,8 @@ const DEFAULT_CONFIG = {
   weeklyDay: 0,                 // 週の振り返りを送る曜日（0＝日曜）
   weeklyTime: '21:00',
   ownRule: '',                  // 最終段階まで寝た朝に表示する自分ルール（F-20）
-  theme: 'dawn',                // 画面とウィジェットのデザイン（dawn / kissa / station / sora）
+  theme: 'dawn',                // 朝・昼のデザイン（dawn / kissa / station / sora）
+  themeNight: 'kissa',          // 夜（夜・就寝前）のデザイン
   weatherLocation: null,        // 天気の場所 { lat, lon, name }（F-17）。null なら天気を取らない
 }
 
@@ -214,6 +215,7 @@ function normalizeConfig(raw) {
   if (isTime(c.weeklyTime)) out.weeklyTime = normalizeTime(c.weeklyTime)
   if (typeof c.ownRule === 'string') out.ownRule = c.ownRule.trim()
   if (['dawn', 'kissa', 'station', 'sora'].indexOf(c.theme) >= 0) out.theme = c.theme
+  if (['dawn', 'kissa', 'station', 'sora'].indexOf(c.themeNight) >= 0) out.themeNight = c.themeNight
   const w = c.weatherLocation
   if (w && Number.isFinite(w.lat) && Number.isFinite(w.lon)) out.weatherLocation = { lat: w.lat, lon: w.lon, name: String(w.name || '') }
   return out
