@@ -48,11 +48,16 @@ async function preview() {
 // ロック画面のウィジェットをタップして、このスクリプトがアプリで開いた場合に備える
 // （ウィジェットの「When Interacting」が「Run Script」のままだと、URL ではなくこのスクリプトが開く）。
 // チェックインの受付中ならチェックインのショートカットを、朝ならホーム画面を開く。それ以外は見た目の確認
+function writeLog(msg) {
+  try { importModule('wake-lib/log').write(msg) } catch (e) { /* 記録なしで続ける */ }
+}
+
 async function tapped() {
   try {
     const data = await core.loadAll()
     const now = new Date()
     if (core.canCheckin(data, now)) {
+      writeLog('ウィジェット（アプリで開いた）: チェックインのショートカットを開く')
       Safari.open(core.shortcutURL('起床チェックイン'))
       return true
     }

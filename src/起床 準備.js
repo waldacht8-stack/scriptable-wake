@@ -7,12 +7,16 @@
 //   エラーの文（「明日は起床しない曜日です」など）がそのまま利用者への知らせになる。
 //   スクリプト自体の不具合などで判断できないときは止めない（鳴る側に倒す）
 
+// 動作の記録（読み込めなくても本来の処理は止めない）
+let log = { write() {} }
+try { log = importModule('wake-lib/log') } catch (e) { /* 記録なしで続ける */ }
 const core = importModule('wake-lib/core')
 const notify = importModule('wake-lib/notify')
 const actions = importModule('wake-lib/actions')(core, notify)
 
 const r = await actions.run('plan')
 const msg = actions.lastMessage()
+log.write('アラーム準備（' + (config.runsInApp ? 'アプリから' : 'ショートカットから') + '）: ' + r + ' ' + msg)
 if (config.runsInApp && !config.runsWithSiri) {
   // Scriptable で直接実行したとき：判断だけ見せる
   const a = new Alert()

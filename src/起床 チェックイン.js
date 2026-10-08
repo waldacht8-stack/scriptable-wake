@@ -7,12 +7,16 @@
 //   チェックインできなかったとき（受付時間外・起床日でない・エラー）は、わざとエラーで止める
 //   → ショートカットがそこで止まり、アラームはオフにならない（鳴る側に倒す）
 
+// 動作の記録（読み込めなくても本来の処理は止めない）
+let log = { write() {} }
+try { log = importModule('wake-lib/log') } catch (e) { /* 記録なしで続ける */ }
 const core = importModule('wake-lib/core')
 const notify = importModule('wake-lib/notify')
 const actions = importModule('wake-lib/actions')(core, notify, importModule('wake-lib/weather'))
 
 const r = await actions.run('tap')
 const msg = actions.lastMessage()
+log.write('チェックイン（' + (config.runsInApp ? 'アプリから' : 'ショートカットから') + '）: ' + r + ' ' + msg)
 if (config.runsInApp && !config.runsWithSiri) {
   const a = new Alert()
   a.title = r === 'OK' ? '☀️ チェックインしました' : 'チェックインできません'
