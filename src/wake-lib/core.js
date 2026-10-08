@@ -445,11 +445,13 @@ function checkin(data, now, code, method) {
   }
   const today = startOfDay(now)
   const existing = sessionOf(data, today)
-  if (isCheckedIn(existing)) {
-    return { result: 'already', message: '今日はチェックイン済みです（' + fmtTime(new Date(existing.checkinAt)) + '）', session: existing }
-  }
   const opens = addMinutes(at(today, cfg.stages[0].time), -cfg.checkinOpensMinutes)
   const closes = at(today, cfg.noon)
+  // チェックイン済みでも「OK（アラームをオフ）」を返すのは受付時間内だけ。
+  // 夜に充電器を外したときなどに OK を返すと、20:00 にオンにした翌朝のアラームを消してしまうため
+  if (isCheckedIn(existing) && now >= opens && now < closes) {
+    return { result: 'already', message: '今日はチェックイン済みです（' + fmtTime(new Date(existing.checkinAt)) + '）', session: existing }
+  }
   if (!isWakeDay(data, today) || now < opens || now >= closes || existing) {
     return {
       result: 'closed',

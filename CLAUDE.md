@@ -21,6 +21,11 @@
   - `src/wake-lib/*.js`：共通モジュール（`importModule('wake-lib/xxx')` で読む）
   - データ：iCloud の Scriptable フォルダ内 `WakeApp/`（要件書 7 章）
 
+## テスト（変更したら必ず流す）
+
+- `.\tools\test.ps1`：部品のテスト（tests/unit.js）と通しのテスト（tests/e2e-*.js）。Chrome で Scriptable の環境をまねて、各スクリプトを最初から最後まで動かす（ショートカットへの出力、通知、確認画面、ホーム画面のボタン操作、ウィジェット96通り、更新スクリプトなど）
+- `.\tools\test.ps1 -Preview`：あわせてウィジェット・ホーム画面・パネルの見た目を tests/out/ に画像で出す（4デザイン）
+- iPhone でしか確かめられないこと（ショートカット、時計アプリ、オートメーション、ロック画面、通知の実表示）は、iPhone の WakeApp/debug-log.txt（iCloud 経由でパソコンから読める）で確かめる
 ## 既存 Todo アプリ（読み取り専用・変更禁止）
 
 iCloud の Scriptable フォルダに既にある。中身を参考にしてよいが、ファイルは書き換えないこと。
