@@ -208,6 +208,10 @@ async function scenarios() {
     ok('表の画面 ' + v + ': 組み立てられる', !r.error && r.tables.length >= 1, r.error && r.error.message)
   }
 
+  // ---- 14b. 通知から開く：ホーム画面で該当のパネルが開く ----
+  ok('持ち物の通知: パネルを開くURL', PENDING.concat(DELIVERED).filter(n => /^wake-belong-/.test(n.identifier || '')).every(n => /panel=belongings/.test(n.openURL)))
+  r = await run('起床.js', { app: true, query: { panel: 'belongings' } })
+  ok('通知から開く: 持ち物パネルを最初から開く', !r.error && r.webviews === 1 && (r.html || '').indexOf('"openPanel":"belongings"') >= 0, r.error && r.error.message)
   // ---- 15. 更新スクリプト ----
   resetFS()
   ALERTS = [{ i: 0 }]

@@ -61,7 +61,7 @@ async function scheduleBelongings(core, data, now) {
   const when = core.addMinutes(core.at(now, dep), -cfg.belongingsMinutes)
   if (when <= now) return false
   await schedule(PREFIX + 'belong-' + core.dateKey(now), '🎒 出発' + cfg.belongingsMinutes + '分前：持ち物チェック',
-    cfg.belongings.join('・'), when, core.appURL({ view: 'belongings' }))
+    cfg.belongings.join('・'), when, core.appURL({ panel: 'belongings' }))
   return true
 }
 
@@ -75,7 +75,7 @@ async function scheduleWeekly(core, data, now) {
   const when = core.at(now, cfg.weeklyTime)
   if (now >= when && data.state.weeklySent === key) return false
   const body = weeklyBody(core, data, now)
-  await schedule(PREFIX + 'weekly', '📊 今週の起床', body, now < when ? when : null, core.appURL({ view: 'records' }))
+  await schedule(PREFIX + 'weekly', '📊 今週の起床', body, now < when ? when : null, core.appURL({ panel: 'records' }))
   data.state.weeklySent = key
   return true
 }
@@ -96,7 +96,7 @@ function weeklyBody(core, data, now) {
 // その場で週の振り返りを送る（ショートカットの weekly 用。残してあるだけで、通常は scheduleWeekly で足りる）
 async function weekly(core, data, now) {
   const body = weeklyBody(core, data, now)
-  await schedule(PREFIX + 'weekly', '📊 今週の起床', body, null, core.appURL({ view: 'records' }))
+  await schedule(PREFIX + 'weekly', '📊 今週の起床', body, null, core.appURL({ panel: 'records' }))
   return body
 }
 

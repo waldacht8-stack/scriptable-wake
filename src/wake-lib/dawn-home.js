@@ -280,6 +280,7 @@ document.getElementById('secondary').innerHTML=m.secondary.map(function(a){retur
 document.getElementById('menu').innerHTML=m.menu.map(function(a){return btn(a)}).join('');
 }
 render(${JSON.stringify(m)});
+if(M&&M.openPanel)setTimeout(function(){openPanel(M.openPanel)},400);
 setInterval(tick,20000);
 </script></body></html>`
   }
@@ -367,7 +368,10 @@ setInterval(tick,20000);
   async function present(ctx) {
     const log = ctx.log || (() => {})
     const wv = new WebView()
-    const html = page(await model(ctx.data, new Date()))
+    const first = await model(ctx.data, new Date())
+    // 通知から開いたとき：指定のパネルを最初から開く
+    if (['routine', 'belongings', 'records', 'settings', 'tasks'].indexOf(ctx.panel) >= 0) first.openPanel = ctx.panel
+    const html = page(first)
     log('ホーム画面の中身を作成（' + html.length + '文字）')
     // 読み込みの完了が知らされないことがあっても、3秒で表示に進む
     await Promise.race([wv.loadHTML(html), wait(3000)])

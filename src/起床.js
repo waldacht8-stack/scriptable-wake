@@ -54,7 +54,7 @@ async function runApp(core, notify, actions) {
   if (core.settleMissed(data, now)) core.saveSessions(data)
   if (!(await actions.housekeeping(data, now))) data.problems.push('通知を予約できません（設定 > Scriptable で通知を許可してください）')
   const q = args.queryParameters || {}
-  const ctx = { core, notify, data, log: step }
+  const ctx = { core, notify, data, log: step, panel: q.panel }
   // ウィジェットのタップ（朝）：今のルーティン項目を完了にしてから開く（太陽が1つ昇った画面になる）
   if (q.action === 'next') {
     const st = core.routineStatus(data, now)
