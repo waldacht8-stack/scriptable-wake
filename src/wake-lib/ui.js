@@ -11,19 +11,29 @@ const STYLES = {
   station: { bg: '#0B0B0C', ink: '#F5F5F5', muted: '#9A9A9A', accent: '#FFB300', card: '#1C1C21', head: '#141416', warn: '#FF6B5E', font: ['HiraginoSans-W6', 'HiraginoSans-W3'] },
   sora: { bg: '#FFFFFF', ink: '#1E2B3C', muted: '#62728A', accent: '#2F6FEB', card: '#EAF2FC', head: '#F2F7FD', warn: '#C2410C', font: ['HiraginoSans-W6', 'HiraginoSans-W3'] },
 }
+// 夜（夜・就寝前）の色。書体は同じで、色だけ夜にする
+const STYLES_NIGHT = {
+  dawn: { bg: '#11152A', ink: '#E9E6F2', muted: '#9B98B5', accent: '#F2B880', card: '#1B2040', head: '#161B36', warn: '#F2B880' },
+  kissa: { bg: '#231914', ink: '#F1E4D0', muted: '#B9A48C', accent: '#E9A066', card: '#2E221B', head: '#2A1F18', warn: '#E9A066' },
+  station: { bg: '#06080F', ink: '#F5F5F5', muted: '#9A9A9A', accent: '#FFB300', card: '#141A2A', head: '#0B0F1C', warn: '#FF6B5E' },
+  sora: { bg: '#152034', ink: '#EAF0F8', muted: '#9FB0C8', accent: '#8FB8FF', card: '#1E2B44', head: '#1A263D', warn: '#FFC9A8' },
+}
 let S = STYLES.dawn
 const C = {}
 
 // 画面を開くたびに、設定のデザインを読み直す
 function useTheme(ctx) {
   let name = 'dawn'
+  let night = false
   try {
     // 朝・昼と夜でデザインを変える（ホーム画面・ロック画面と同じ）
     const cfg = ctx.data.config
     const ph = ctx.core.phaseAt(ctx.data, new Date()).phase
-    name = (ph === 'night' || ph === 'presleep') ? (cfg.themeNight || cfg.theme) : cfg.theme
+    night = ph === 'night' || ph === 'presleep'
+    name = night ? (cfg.themeNight || cfg.theme) : cfg.theme
   } catch (e) { /* 決められなければ標準 */ }
-  S = STYLES[name] || STYLES.dawn
+  const base = STYLES[name] || STYLES.dawn
+  S = night ? Object.assign({}, base, STYLES_NIGHT[name] || STYLES_NIGHT.dawn) : base
   C.accent = new Color(S.accent)
   C.warn = new Color(S.warn)
   C.sub = new Color(S.muted)

@@ -6,7 +6,7 @@ async function homeMain() {
   const RealDate = Date
   const at = (h, m) => { NOW = new RealDate(2026, 9, 8, h, m).getTime(); globalThis.Date = class extends RealDate { constructor(...a) { a.length ? super(...a) : super(NOW) } static now() { return NOW } } }
   const ses = { date: '2026-10-08', checkinAt: '2026-10-08T07:12:00+09:00', wokeStage: 1, score: 85, method: 'widget' }
-  const mk = (done, withSes) => ({ config: core.normalizeConfig({ bedtime: '00:00', ownRule: '', theme: THEME, themeNight: THEME }), state: { plan: { date: '2026-10-09', wake: true, reason: '' }, skipDates: [], routine: { date: '2026-10-08', done }, weather: { date: '2026-10-08', text: '晴れ 25℃/16℃ 雨10%' }, tasks: { date: '2026-10-08', items: ['ゴミ出し'] } }, sessions: withSes ? [ses] : [], problems: [] })
+  const mk = (done, withSes) => ({ config: core.normalizeConfig({ bedtime: '00:00', ownRule: '', theme: THEME }), state: { plan: { date: '2026-10-09', wake: true, reason: '' }, skipDates: [], routine: { date: '2026-10-08', done }, weather: { date: '2026-10-08', text: '晴れ 25℃/16℃ 雨10%' }, tasks: { date: '2026-10-08', items: ['ゴミ出し'] } }, sessions: withSes ? [ses] : [], problems: [] })
   const cases = [['起床中 7:13', 7, 13, mk(0, false)], ['朝 7:18（2/5）', 7, 18, mk(2, true)], ['昼間 9:00', 9, 0, mk(5, true)], ['夜 21:30', 21, 30, mk(5, true)]]
   const root = document.getElementById('root')
   for (const [label, h, m, data] of cases) {

@@ -18,10 +18,10 @@ module.exports = function (core, ui, notify, dawn) {
     const sections = []
     if (data.configBroken) sections.push(sec('⚠ 設定ファイルが壊れていました', '初期設定で動いています。変更すると保存し直します', []))
     const TM = dawn.theme(cfg.theme)
-    const TN = dawn.theme(cfg.themeNight)
-    sections.push(sec('デザイン', 'ホーム画面とロック画面の見た目。夜（就寝の30分前まで）は夜のデザインになります', [
-      row('朝・昼　' + TM.name, TM.note, 'theme'),
-      row('夜　' + TN.name, TN.note, 'themeNight'),
+    const TN = cfg.themeNight ? dawn.theme(cfg.themeNight) : null
+    sections.push(sec('デザイン', '朝・昼・夜で色が変わります（書体や形は同じ）', [
+      row(TM.name, TM.note, 'theme'),
+      row('夜だけ別のデザイン', TN ? TN.name : 'なし（おすすめ）', 'themeNight'),
     ]))
     sections.push(sec('段階アラーム', '時計アプリのアラームも同じ時刻・ラベルにしてください',
       cfg.stages.map(s => row('段階' + (s.index + 1) + '　' + core.shortTime(s.time), s.name + '・' + s.score + '点・' + s.clockLabel, 'stage:' + s.index))
@@ -72,8 +72,10 @@ module.exports = function (core, ui, notify, dawn) {
   async function change(cfg, key) {
     const [kind, arg] = key.split(':')
     if (kind === 'theme' || kind === 'themeNight') {
-      const keys = Object.keys(dawn.THEMES)
-      const i = await ui.choose(kind === 'theme' ? '朝・昼のデザイン' : '夜のデザイン', keys.map(k => (cfg[kind] === k ? '✓ ' : '') + dawn.THEMES[k].name + '（' + dawn.THEMES[k].note + '）'))
+      // 夜は「なし（朝・昼と同じ）」を先頭に
+      const keys = (kind === 'themeNight' ? [''] : []).concat(Object.keys(dawn.THEMES))
+      const label = k => k ? dawn.THEMES[k].name + '（' + dawn.THEMES[k].note + '）' : 'なし（朝・昼と同じデザインで、色だけ夜にする）'
+      const i = await ui.choose(kind === 'theme' ? 'デザイン' : '夜だけ別のデザイン', keys.map(k => ((cfg[kind] || '') === k ? '✓ ' : '') + label(k)))
       if (i < 0) return false
       cfg[kind] = keys[i]
       return true

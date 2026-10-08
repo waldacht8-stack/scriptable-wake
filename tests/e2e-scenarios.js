@@ -159,14 +159,14 @@ async function scenarios() {
   ok('設定: 週の振り返り 日曜20時', c.weeklyDay === 0 && c.weeklyTime === '20:00', [c.weeklyDay, c.weeklyTime])
   ok('設定: 受付90分・持ち物10分', c.checkinOpensMinutes === 90 && c.belongingsMinutes === 10)
   ok('設定: デザイン 駅の発車標', c.theme === 'station', c.theme)
-  ok('設定: 夜の時間帯は夜のデザイン（初期は喫茶モーニング）で表示', r.lastModel && r.lastModel.theme === 'kissa', r.lastModel && r.lastModel.theme)
+  ok('設定: 夜も同じデザイン（初期は夜だけ別のデザインなし）', r.lastModel && r.lastModel.theme === 'station' && r.lastModel.phase === 'night', r.lastModel && [r.lastModel.theme, r.lastModel.phase])
 
   // ---- 10. デザインのメニュー ----
   WV_ACTIONS = ['design', 'design', 'set:themeNight']
-  ALERTS = [{ i: 0 }, { i: 3 }, { i: 1 }, { i: 2 }, { i: 0 }]
+  ALERTS = [{ i: 3 }, { i: 4 }, { i: 2 }, { i: 1 }]
   r = await run('起床.js', { app: true })
   ok('デザイン: 朝・昼は青空シンプル', cfg().theme === 'sora', cfg().theme)
-  ok('デザイン: 夜は設定パネルで朝焼けの地平に', cfg().themeNight === 'dawn', cfg().themeNight)
+  ok('デザイン: 夜だけ別のデザイン（喫茶→設定パネルで朝焼けの地平）', cfg().themeNight === 'dawn', cfg().themeNight)
   ok('デザイン: 夜の時間帯は夜のデザインで表示', r.lastModel && r.lastModel.theme === 'dawn', r.lastModel && r.lastModel.theme)
   setNow(2026, 10, 17, 9, 0)
   WV_ACTIONS = []

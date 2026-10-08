@@ -224,10 +224,14 @@ body.kissa{--warn:#B23A24;--s1:#5A3E2B;--s2:#86593D;--s3:#B98557;--s4:#E2BE8F;--
 body.kissa.day{--s1:#8C6A4F;--s2:#B08D6C;--s3:#D2B48F;--s4:#EBD5B5}
 body.kissa.night,body.kissa.presleep{--warn:#E9A066;--s1:#1E1511;--s2:#2B1F18;--s3:#3A2B21;--s4:#4A382B;--sun:#F6E7CC;--paper:#231914;--ink:#F1E4D0;--muted:#B9A48C;--btn:#F1E4D0;--btnInk:#231914;--line:#F1E4D0;--accent:#E9A066}
 body.station{--warn:#FF6B5E;--s1:#0E0E12;--s2:#15151B;--s3:#1C1C24;--s4:#25252F;--sun:#FFB300;--skyInk:#FFB300;--paper:#0B0B0C;--ink:#F5F5F5;--muted:#8C8C8C;--btn:#FFB300;--btnInk:#0B0B0C;--line:#FFB300;--accent:#7CD86B;--lateInk:#FF6B5E;font-family:"Hiragino Sans","Noto Sans JP",sans-serif}
+/* 駅の発車標：朝は暖かい黒、昼は明るめの灰、夜は青みの黒。琥珀色の文字は共通 */
+body.station.waking,body.station.morning{--s1:#120E0C;--s2:#1A1410;--s3:#241B14;--s4:#30241A}
+body.station.day{--s1:#1D2026;--s2:#252A33;--s3:#2F3541;--s4:#3B4250;--sun:#FFE08A;--paper:#14161A}
+body.station.night,body.station.presleep{--s1:#04060C;--s2:#090D18;--s3:#0F1526;--s4:#161F37;--paper:#06080F}
 body.station .big{font-weight:800;letter-spacing:.02em}
 body.station .label,body.station .date{letter-spacing:.3em}
 body.sora{--warn:#C2410C;--s1:#BFD9F2;--s2:#D3E5F7;--s3:#E4EFFA;--s4:#F2F7FD;--sun:#FFD25E;--skyInk:#1E2B3C;--paper:#FFFFFF;--ink:#1E2B3C;--muted:#62728A;--btn:#2F6FEB;--btnInk:#FFFFFF;--line:#9CB8D8;--accent:#2F6FEB;--lateInk:#C2410C;font-family:"Hiragino Sans","Noto Sans JP",sans-serif}
-body.sora.waking{--s1:#C9D3EE;--s2:#E1D5EA;--s3:#F4DCD6;--s4:#FBEBDD}
+body.sora.waking,body.sora.morning{--s1:#C9D3EE;--s2:#E1D5EA;--s3:#F4DCD6;--s4:#FBEBDD;--sun:#FFC56B;--paper:#FFFBF7}
 body.sora.night,body.sora.presleep{--warn:#FFC9A8;--s1:#1B2740;--s2:#22314F;--s3:#2B3C5E;--s4:#35476D;--sun:#F2F0E0;--skyInk:#EAF0F8;--paper:#152034;--ink:#EAF0F8;--muted:#9FB0C8;--btn:#EAF0F8;--btnInk:#152034;--line:#9FB0C8;--accent:#8FB8FF;--lateInk:#FFC9A8}
 body.sora .big,body.kissa .big{font-weight:700;letter-spacing:.02em}
 @media (prefers-reduced-motion: reduce){*{transition:none!important}}</style></head><body>
@@ -293,25 +297,28 @@ setInterval(tick,20000);
 
   // デザインを選ぶ（ホーム画面とロック画面の両方が変わる）
   async function chooseTheme(data) {
-    const keys = Object.keys(dawn.THEMES)
     const cfg = data.config
-    const p = new Alert()
-    p.title = 'デザイン'
-    p.message = '朝・昼と夜で、別のデザインにできます'
-    p.addAction('朝・昼のデザイン（いま：' + dawn.theme(cfg.theme).name + '）')
-    p.addAction('夜のデザイン（いま：' + dawn.theme(cfg.themeNight).name + '）')
-    p.addCancelAction('キャンセル')
-    const which = await p.presentSheet()
-    if (which < 0) return
-    const key = which === 0 ? 'theme' : 'themeNight'
+    const keys = Object.keys(dawn.THEMES)
     const a = new Alert()
-    a.title = which === 0 ? '朝・昼のデザイン' : '夜のデザイン'
-    a.message = 'ホーム画面とロック画面の見た目が変わります'
-    for (const k of keys) a.addAction((cfg[key] === k ? '✓ ' : '') + dawn.THEMES[k].name + '（' + dawn.THEMES[k].note + '）')
+    a.title = 'デザイン'
+    a.message = '朝・昼・夜で色が変わります（書体や形は同じ）'
+    for (const k of keys) a.addAction((cfg.theme === k ? '✓ ' : '') + dawn.THEMES[k].name + '（' + dawn.THEMES[k].note + '）')
+    a.addAction('夜だけ別のデザインにする…（いま：' + (cfg.themeNight ? dawn.theme(cfg.themeNight).name : 'なし') + '）')
     a.addCancelAction('キャンセル')
     const i = await a.presentSheet()
     if (i < 0) return
-    cfg[key] = keys[i]
+    if (i < keys.length) {
+      cfg.theme = keys[i]
+    } else {
+      const nk = [''].concat(keys)
+      const b = new Alert()
+      b.title = '夜だけ別のデザイン'
+      for (const k of nk) b.addAction(((cfg.themeNight || '') === k ? '✓ ' : '') + (k ? dawn.THEMES[k].name : 'なし（朝・昼と同じデザインで、色だけ夜にする）'))
+      b.addCancelAction('キャンセル')
+      const j = await b.presentSheet()
+      if (j < 0) return
+      cfg.themeNight = nk[j]
+    }
     core.saveConfig(data)
   }
 
