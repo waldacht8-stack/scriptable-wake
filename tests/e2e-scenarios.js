@@ -230,6 +230,15 @@ async function scenarios() {
   ok('更新: 配信をやめたファイルを消す', !('/icloud/起床 NFC.js' in FS))
   ok('更新: 完了の画面', r.alerts[0] === '更新完了', r.alerts)
 
+  // ---- 15b. 最新版の確認（GitHub API）が回数制限で失敗しても、直接取りに行って更新できる ----
+  resetFS()
+  FAIL_API = true
+  ALERTS = [{ i: 0 }]
+  r = await run('起床 Update.js', { app: true })
+  FAIL_API = false
+  ok('更新（API失敗）: それでも完了', r.alerts[0] === '更新完了', r.alerts)
+  ok('更新（API失敗）: ブランチ名＋キャッシュよけで取得', r.requests.some(u => /\/main\/src\/manifest\.json\?t=\d+$/.test(u)), r.requests.slice(0, 3))
+  ok('更新（API失敗）: ファイルを書く', files.every(f => FS['/icloud/' + f.dest] === SOURCES[f.src.split('/').pop()]))
   // ---- 16. 壊れたファイル・古い設定・初回 ----
   resetFS()
   setNow(2026, 10, 21, 21, 0)

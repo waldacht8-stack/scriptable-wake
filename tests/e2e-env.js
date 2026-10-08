@@ -54,6 +54,7 @@ const Safari = { open: u => { RUN.opened.push(u) } }
 const Speech = { speak: async s => { RUN.spoken.push(s) } }
 const Pasteboard = { pasteString: () => '' }
 let HOLIDAYS = []
+let FAIL_API = false
 const Calendar = { forEvents: async () => [{ title: '日本の祝日' }] }
 const CalendarEvent = { between: async (s) => { const k = s.getFullYear() + '-' + String(s.getMonth() + 1).padStart(2, '0') + '-' + String(s.getDate()).padStart(2, '0'); return HOLIDAYS.indexOf(k) >= 0 ? [{ title: 'スポーツの日', isAllDay: true }] : [] } }
 const Location = { setAccuracyToThreeKilometers() {}, current: async () => ({ latitude: 35.68123, longitude: 139.76712 }), reverseGeocode: async () => [{ administrativeArea: '東京都', locality: '千代田区' }] }
@@ -62,9 +63,10 @@ class Request {
   async loadJSON() { RUN.requests.push(this.url); if (this.url.indexOf('forecast_days=2') >= 0) return { daily: { weather_code: [61, 1], temperature_2m_max: [21.6, 25], temperature_2m_min: [14.2, 16], precipitation_probability_max: [70, 10] } }; return { daily: { weather_code: [61], temperature_2m_max: [21.6], temperature_2m_min: [14.2], precipitation_probability_max: [70] } } }
   async loadString() {
     RUN.requests.push(this.url)
+    if (this.url.indexOf('api.github.com') >= 0 && FAIL_API) { this.response.statusCode = 403; return '{"message":"rate limit"}' }
     if (this.url.indexOf('api.github.com') >= 0) return JSON.stringify({ sha: 'abc1234def', commit: { message: 'テスト版' } })
-    if (this.url.endsWith('manifest.json')) return MANIFEST
-    const name = decodeURIComponent(this.url.split('/').pop())
+    if (this.url.split('?')[0].endsWith('manifest.json')) return MANIFEST
+    const name = decodeURIComponent(this.url.split('/').pop().split('?')[0])
     if (SOURCES[name] !== undefined) return SOURCES[name]
     this.response.statusCode = 404; return ''
   }
