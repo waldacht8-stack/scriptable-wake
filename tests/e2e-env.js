@@ -59,7 +59,7 @@ const CalendarEvent = { between: async (s) => { const k = s.getFullYear() + '-' 
 const Location = { setAccuracyToThreeKilometers() {}, current: async () => ({ latitude: 35.68123, longitude: 139.76712 }), reverseGeocode: async () => [{ administrativeArea: '東京都', locality: '千代田区' }] }
 class Request {
   constructor(u) { this.url = u; this.response = { statusCode: 200 } }
-  async loadJSON() { RUN.requests.push(this.url); return { daily: { weather_code: [61], temperature_2m_max: [21.6], temperature_2m_min: [14.2], precipitation_probability_max: [70] } } }
+  async loadJSON() { RUN.requests.push(this.url); if (this.url.indexOf('forecast_days=2') >= 0) return { daily: { weather_code: [61, 1], temperature_2m_max: [21.6, 25], temperature_2m_min: [14.2, 16], precipitation_probability_max: [70, 10] } }; return { daily: { weather_code: [61], temperature_2m_max: [21.6], temperature_2m_min: [14.2], precipitation_probability_max: [70] } } }
   async loadString() {
     RUN.requests.push(this.url)
     if (this.url.indexOf('api.github.com') >= 0) return JSON.stringify({ sha: 'abc1234def', commit: { message: 'テスト版' } })

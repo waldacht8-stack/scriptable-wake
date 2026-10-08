@@ -87,6 +87,8 @@ async function scenarios() {
   r = await run('起床.js', { app: true })
   ok('明日だけオフ: お休みに登録', state().skipDates.indexOf('2026-10-14') >= 0 && state().pendingOff === '2026-10-14', state())
   ok('明日だけオフ: チェックインのショートカットを開く', r.opened.indexOf(S('起床チェックイン')) >= 0, r.opened)
+  ok('夜に開く: 明日の天気を取っておく', state().weatherTomorrow && state().weatherTomorrow.date === '2026-10-14' && /^晴れ 25℃\/16℃/.test(state().weatherTomorrow.text), state().weatherTomorrow)
+  ok('夜に開く: ホーム画面に明日の天気', (r.html || '').indexOf('明日の天気　晴れ') >= 0)
   setNow(2026, 10, 13, 21, 1)
   r = await run('起床 チェックイン.js')
   ok('明日だけオフ: ショートカットが OK（アラームをオフ）', r.output === 'OK' && state().pendingOff === null, [r.output, r.error && r.error.message])

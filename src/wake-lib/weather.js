@@ -50,4 +50,22 @@ async function today(cfg) {
   }
 }
 
-module.exports = { today, summarize, codeText, url }
+// 明日の天気の文（夜にアプリを開いたとき用）。場所が未設定・通信できないときは null
+async function tomorrow(cfg) {
+  const loc = cfg.weatherLocation
+  if (!loc || !Number.isFinite(loc.lat) || !Number.isFinite(loc.lon)) return null
+  try {
+    const r = new Request(url(loc).replace('forecast_days=1', 'forecast_days=2'))
+    r.timeoutInterval = 6
+    const j = await r.loadJSON()
+    const d = j && j.daily
+    if (!d || !d.weather_code || d.weather_code.length < 2) return null
+    const pick = k => (d[k] ? [d[k][1]] : undefined)
+    return summarize({ daily: { weather_code: pick('weather_code'), temperature_2m_max: pick('temperature_2m_max'), temperature_2m_min: pick('temperature_2m_min'), precipitation_probability_max: pick('precipitation_probability_max') } })
+  } catch (e) {
+    console.warn('明日の天気を取得できませんでした: ' + e)
+    return null
+  }
+}
+
+module.exports = { today, tomorrow, summarize, codeText, url }

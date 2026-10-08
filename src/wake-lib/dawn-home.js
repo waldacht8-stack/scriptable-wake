@@ -34,7 +34,9 @@ module.exports = function (core, dawn, ui, notify, settings) {
       steps: [], lines: [], primary: null, secondary: [],
       menu: [['panel:routine', 'ルーティン'], ['panel:belongings', '持ち物'], ['panel:records', '記録'], ['design', 'デザイン'], [settings ? 'panel:settings' : 'settings', '設定']],
     }
-    const weather = optional(core.weatherFor, data, now)
+    // 今日の天気：チェックインのときに取った分、なければ前の晩に取った分
+    const wt = data.state.weatherTomorrow
+    const weather = optional(core.weatherFor, data, now) || (wt && wt.date === core.dateKey(now) ? wt.text : null)
     const today = optional(core.tasksFor, data, now) || []
 
     if (ph.phase === 'waking') {
@@ -106,6 +108,7 @@ module.exports = function (core, dawn, ui, notify, settings) {
       const plan = data.state.plan
       const prepared = plan && plan.date === core.dateKey(core.planTargetDay(cfg, now))
       m.lines.push(prepared ? (plan.wake ? 'アラームは準備できています' : 'アラームはかけません（' + plan.reason + '）') : 'アラームの準備がまだです')
+      if (wt && wt.date === core.dateKey(tomorrow)) m.lines.push(label + 'の天気　' + wt.text)
       if (wake) m.lines.push('アラーム' + N(cfg.stages.length) + 'つ　' + cfg.stages.map(s => core.shortTime(s.time)).join('・'))
       const next = optional(core.tasksFor, data, tomorrow) || []
       if (next.length) m.lines.push(label + 'やること　' + next.join('・'))

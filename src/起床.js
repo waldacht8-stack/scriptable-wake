@@ -55,7 +55,23 @@ async function runApp(core, notify, actions) {
   if (!(await actions.housekeeping(data, now))) data.problems.push('通知を予約できません（設定 > Scriptable で通知を許可してください）')
   const q = args.queryParameters || {}
   const ctx = { core, notify, data, log: step, panel: q.panel }
-  // ウィジェットのタップ（朝）：今のルーティン項目を完了にしてから開く（太陽が1つ昇った画面になる）
+  // 夜に開いたら、次の朝の天気を取っておく（その朝の分は1回だけ。通信できなければ何もしない）
+  try {
+    const phase = core.phaseAt(data, now).phase
+    const day = core.wakeDayAfter(now)
+    const key = core.dateKey(day)
+    const cached = data.state.weatherTomorrow
+    if ((phase === 'night' || phase === 'presleep') && data.config.weatherLocation && !(cached && cached.date === key)) {
+      const weather = importModule('wake-lib/weather')
+      const text = key === core.dateKey(now) ? await weather.today(data.config) : await weather.tomorrow(data.config)
+      if (text) {
+        data.state.weatherTomorrow = { date: key, text }
+        core.saveState(data)
+      }
+    }
+  } catch (e) {
+    step('明日の天気を取れません: ' + (e && e.message ? e.message : e))
+  }  // ウィジェットのタップ（朝）：今のルーティン項目を完了にしてから開く（太陽が1つ昇った画面になる）
   if (q.action === 'next') {
     const st = core.routineStatus(data, now)
     if (!st.complete) {
