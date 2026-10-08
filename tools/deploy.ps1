@@ -11,14 +11,18 @@ if (-not (Test-Path $dest)) {
 
 # 既存 Todo アプリのファイルは触らない（本アプリのファイルだけをコピー）
 $files = Get-ChildItem $src -Recurse -File -Filter '*.js'
+# 中身が変わったファイルだけ送る（iCloud の同期の負担を減らすため）
+$copied = 0
 foreach ($f in $files) {
     $rel    = $f.FullName.Substring((Resolve-Path $src).Path.Length + 1)
     $target = Join-Path $dest $rel
+    if ((Test-Path $target) -and ((Get-FileHash $target).Hash -eq (Get-FileHash $f.FullName).Hash)) { continue }
     New-Item -ItemType Directory -Force (Split-Path $target) | Out-Null
     Copy-Item $f.FullName $target -Force
     Write-Host "コピー: $rel"
+    $copied++
 }
-Write-Host "完了: $($files.Count) ファイル。iCloud の同期後に iPhone の Scriptable で確認してください。"
+Write-Host "完了: $copied ファイルを更新（全 $($files.Count) ファイル）。iCloud の同期後に iPhone の Scriptable で確認してください。"
 
 # GitHub 配信用の manifest.json に載っていないスクリプトがあれば知らせる（載せ忘れると「起床 Update」で配られない）
 $manifest = Get-Content (Join-Path $src 'manifest.json') -Raw -Encoding UTF8 | ConvertFrom-Json

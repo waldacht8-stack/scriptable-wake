@@ -393,7 +393,6 @@ setInterval(tick,20000);
     // 通知から開いたとき：指定のパネルを最初から開く
     if (['routine', 'belongings', 'records', 'settings', 'tasks'].indexOf(ctx.panel) >= 0) first.openPanel = ctx.panel
     const html = page(first)
-    log('ホーム画面の中身を作成（' + html.length + '文字）')
     // 読み込みの完了が知らされないことがあっても、3秒で表示に進む
     await Promise.race([wv.loadHTML(html), wait(3000)])
     log('ホーム画面を表示')
@@ -411,7 +410,6 @@ setInterval(tick,20000);
         break
       }
       if (closed || !a) break
-      log('ボタン: ' + a)
       try {
         await handle(ctx, a)
       } catch (e) {

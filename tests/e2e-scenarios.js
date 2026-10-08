@@ -51,7 +51,7 @@ async function scenarios() {
   ok('アプリ: ホーム画面が開く', r.webviews === 1 && !r.error, r.error && r.error.message)
   ok('設定: 天気の場所を登録（約1km単位）', cfg().weatherLocation && cfg().weatherLocation.lat === 35.68 && cfg().weatherLocation.name === '東京都 千代田区', cfg().weatherLocation)
   ok('設定: 自分ルール', cfg().ownRule === '23時にスマホを置く', cfg().ownRule)
-  ok('アプリ: ボタンが記録に残る', logLines().some(l => l.indexOf('ボタン: set:weather') >= 0))
+  ok('アプリ: ふだんのボタン操作は記録しない（同期の負担を減らす）', !logLines().some(l => l.indexOf('ボタン: ') >= 0))
 
   setNow(2026, 10, 12, 21, 5)
   r = await run('起床 準備.js')

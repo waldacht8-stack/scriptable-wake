@@ -46,10 +46,8 @@ async function showError(title, e) {
 
 async function runApp(core, notify, actions) {
   const step = s => debugLog('起動: ' + s)
-  step('開始')
   const ui = importModule('wake-lib/ui')
   const data = await core.loadAll()
-  step('データ読み込み完了')
   const now = new Date()
   if (core.settleMissed(data, now)) core.saveSessions(data)
   if (!(await actions.housekeeping(data, now))) data.problems.push('通知を予約できません（設定 > Scriptable で通知を許可してください）')
@@ -88,7 +86,6 @@ async function runApp(core, notify, actions) {
     const settings = importModule('wake-lib/settings')(core, ui, notify, dawn)
     const home = importModule('wake-lib/dawn-home')(core, dawn, ui, notify, settings)
     await home.present(ctx)
-    step('ホーム画面を閉じた')
   } catch (e) {
     debugLog('ホーム画面（WebView）を開けません: ' + errorText(e).replace(/\n/g, ' / '))
     await ui.home(ctx)
